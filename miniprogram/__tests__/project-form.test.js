@@ -219,8 +219,9 @@ describe('project form', () => {
     expect(markup).toContain('class="form-group surface"');
     expect(markup).toContain('class="form-row"');
     expect(markup).toContain('class="form-label"');
-    expect(styles).toContain('min-height: 104rpx');
-    expect(styles).toContain('line-height: 76rpx');
+    expect(styles).toContain('min-height: 116rpx');
+    expect(styles).toContain('height: 88rpx');
+    expect(styles).toContain('line-height: 88rpx');
     expect(styles).toContain('text-align: right');
   });
 

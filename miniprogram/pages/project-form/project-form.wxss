@@ -6,7 +6,7 @@
 .form-row {
   display: flex;
   align-items: center;
-  min-height: 104rpx;
+  min-height: 116rpx;
   border-bottom: 1rpx solid var(--color-separator);
   box-sizing: border-box;
 }
@@ -36,14 +36,19 @@
 .field,
 .textarea {
   width: 100%;
-  min-height: 76rpx;
+  min-height: 88rpx;
   padding: 0;
   background: transparent;
   box-sizing: border-box;
   color: var(--color-primary-text);
   font-size: var(--font-body);
-  line-height: 76rpx;
+  line-height: 88rpx;
   text-align: right;
+}
+
+.field {
+  display: block;
+  height: 88rpx;
 }
 
 .picker-field {
