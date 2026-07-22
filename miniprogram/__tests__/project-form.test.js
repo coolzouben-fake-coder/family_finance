@@ -45,6 +45,8 @@ function createProjectFormPage(form) {
   page.redeem = pageDefinition.redeem.bind(page);
   if (pageDefinition.remove) page.remove = pageDefinition.remove.bind(page);
   if (pageDefinition.onDateChange) page.onDateChange = pageDefinition.onDateChange.bind(page);
+  if (pageDefinition.onStartDateChange) page.onStartDateChange = pageDefinition.onStartDateChange.bind(page);
+  if (pageDefinition.onEndDateChange) page.onEndDateChange = pageDefinition.onEndDateChange.bind(page);
   if (pageDefinition.onRedeemDateChange) page.onRedeemDateChange = pageDefinition.onRedeemDateChange.bind(page);
   return page;
 }
@@ -222,7 +224,7 @@ describe('project form', () => {
     const markup = fs.readFileSync(path.join(__dirname, '../pages/project-form/project-form.wxml'), 'utf8');
     const styles = fs.readFileSync(path.join(__dirname, '../pages/project-form/project-form.wxss'), 'utf8');
 
-    expect(markup).toContain("{{form.startDate || '开始日期 YYYY-MM-DD'}}");
+    expect(markup).toContain('{{startDateText}}');
     expect(markup).not.toContain('class="form-label"');
     expect(styles).toContain('height: 96rpx');
     expect(styles).toContain('line-height: 56rpx');
@@ -233,13 +235,20 @@ describe('project form', () => {
     const markup = require('fs').readFileSync(require('path').join(__dirname, '../pages/project-form/project-form.wxml'), 'utf8');
     const page = createProjectFormPage();
 
-    page.onDateChange({ currentTarget: { dataset: { field: 'startDate' } }, detail: { value: '2026-07-02' } });
+    page.onStartDateChange({ detail: { value: '2026-07-02' } });
+    page.onEndDateChange({ detail: { value: '2026-07-29' } });
     page.onRedeemDateChange({ currentTarget: { dataset: { field: 'redeemDate' } }, detail: { value: '2026-07-30' } });
 
     expect(markup).toContain('mode="date"');
-    expect(markup).toContain('bindchange="onDateChange"');
+    expect(markup).toContain('bindchange="onStartDateChange"');
+    expect(markup).toContain('bindchange="onEndDateChange"');
     expect(markup).toContain('bindchange="onRedeemDateChange"');
+    expect(markup).toContain('{{startDateText}}');
+    expect(markup).toContain('{{endDateText}}');
     expect(page.data.form.startDate).toBe('2026-07-02');
+    expect(page.data.form.endDate).toBe('2026-07-29');
+    expect(page.data.startDateText).toBe('2026-07-02');
+    expect(page.data.endDateText).toBe('2026-07-29');
     expect(page.data.redeemForm.redeemDate).toBe('2026-07-30');
   });
 

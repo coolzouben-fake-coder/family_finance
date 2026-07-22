@@ -12,6 +12,10 @@ function emptyForm() {
   };
 }
 
+const START_DATE_PLACEHOLDER = '开始日期 YYYY-MM-DD';
+const END_DATE_PLACEHOLDER = '结束日期 YYYY-MM-DD';
+const REDEEM_DATE_PLACEHOLDER = '到账日期 YYYY-MM-DD';
+
 function showError(error) { wx.showToast({ title: error.message || '保存失败', icon: 'none' }); }
 
 function isValidDateInput(dateText) {
@@ -39,6 +43,7 @@ Page({
     projectId: '', categories: [], users: [], selectedCategoryName: '', selectedRegistrantName: '',
     loading: true, ready: false, errorMessage: '',
     isLocked: false, isRedeemed: false, isCancelled: false, lockedMessage: '', saving: false, redeeming: false, removing: false,
+    startDateText: START_DATE_PLACEHOLDER, endDateText: END_DATE_PLACEHOLDER, redeemDateText: REDEEM_DATE_PLACEHOLDER,
     form: emptyForm(), redeemForm: { redeemDate: '', actualInterest: '', actualFixedReward: '' }
   },
   onLoad(options) {
@@ -66,6 +71,9 @@ Page({
           selectedRegistrantName: selectedRegistrant ? selectedRegistrant.displayName : '',
           isLocked: Boolean(project), isRedeemed, isCancelled,
           lockedMessage: isCancelled ? '此项目已取消，记录不可再编辑。' : '项目创建后基础信息不可编辑，可确认到账或删除项目。',
+          startDateText: project && project.startDate ? project.startDate : START_DATE_PLACEHOLDER,
+          endDateText: project && project.endDate ? project.endDate : END_DATE_PLACEHOLDER,
+          redeemDateText: project && project.redeemDate ? project.redeemDate : REDEEM_DATE_PLACEHOLDER,
           form: project ? {
             name: project.name, categoryId: project.categoryId, registrantOpenid: project.registrantOpenid,
             principal: String(project.principal), startDate: project.startDate, endDate: project.endDate,
@@ -85,8 +93,9 @@ Page({
   },
   onInput(event) { this.setData({ [`form.${event.currentTarget.dataset.field}`]: event.detail.value }); },
   onRedeemInput(event) { this.setData({ [`redeemForm.${event.currentTarget.dataset.field}`]: event.detail.value }); },
-  onDateChange(event) { this.setData({ [`form.${event.currentTarget.dataset.field}`]: event.detail.value }); },
-  onRedeemDateChange(event) { this.setData({ [`redeemForm.${event.currentTarget.dataset.field}`]: event.detail.value }); },
+  onStartDateChange(event) { this.setData({ 'form.startDate': event.detail.value, startDateText: event.detail.value }); },
+  onEndDateChange(event) { this.setData({ 'form.endDate': event.detail.value, endDateText: event.detail.value }); },
+  onRedeemDateChange(event) { this.setData({ 'redeemForm.redeemDate': event.detail.value, redeemDateText: event.detail.value }); },
   onCategoryChange(event) {
     const category = this.data.categories[Number(event.detail.value)];
     this.setData({ selectedCategoryName: category.name, 'form.categoryId': category._id });
