@@ -40,7 +40,7 @@ async function updateAssets(openid, totalAmount, reason) {
   }
 
   const amount = Number(totalAmount);
-  if (amount < 0) {
+  if (!Number.isFinite(amount) || amount < 0) {
     throw new Error('TOTAL_AMOUNT_INVALID');
   }
 

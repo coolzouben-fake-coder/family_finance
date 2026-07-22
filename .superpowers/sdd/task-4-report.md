@@ -67,6 +67,28 @@
 
 ---
 
+## Overflow Validation Fix Report
+
+### Fixes Applied
+
+- Rejected numeric strings that convert to `Infinity` by requiring `Number.isFinite(amount)` after conversion.
+- Added regression coverage for the overflowing decimal string `'9'.repeat(400)` and verified no asset or audit records are written.
+
+### Verification
+
+- `npm test -- cloudfunctions/assets/index.test.js --runInBand`: passed, 1 suite and 24 tests.
+- `npm test -- --runInBand`: passed, 5 suites and 36 tests.
+- `node --check cloudfunctions/assets/index.js`: passed.
+- `git diff --check`: passed.
+
+### Files Changed
+
+- `cloudfunctions/assets/index.js`
+- `cloudfunctions/assets/index.test.js`
+- `.superpowers/sdd/task-4-report.md`
+
+---
+
 ## Final Review Fix Report
 
 ### Fixes Applied

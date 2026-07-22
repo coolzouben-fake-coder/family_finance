@@ -169,6 +169,7 @@ test.each([
   '',
   '   ',
   'abc',
+  '9'.repeat(400),
   true,
   false,
   [],
