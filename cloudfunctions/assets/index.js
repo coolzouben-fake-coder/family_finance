@@ -12,12 +12,30 @@ async function requireAllowed(openid) {
   }
 }
 
+function isMissingDocumentError(error) {
+  return error && error.errCode === 'DATABASE_DOCUMENT_NOT_EXIST';
+}
+
 async function getAssets() {
-  const result = await db.collection('family_assets').doc(ASSET_DOCUMENT_ID).get();
-  return result.data || { totalAmount: 0 };
+  try {
+    const result = await db.collection('family_assets').doc(ASSET_DOCUMENT_ID).get();
+    return result.data;
+  } catch (error) {
+    if (isMissingDocumentError(error)) {
+      return { totalAmount: 0 };
+    }
+    throw error;
+  }
 }
 
 async function updateAssets(openid, totalAmount, reason) {
+  if (
+    totalAmount == null
+    || (typeof totalAmount === 'string' && totalAmount.trim() === '')
+  ) {
+    throw new Error('TOTAL_AMOUNT_INVALID');
+  }
+
   const amount = Number(totalAmount);
   if (!Number.isFinite(amount) || amount < 0) {
     throw new Error('TOTAL_AMOUNT_INVALID');

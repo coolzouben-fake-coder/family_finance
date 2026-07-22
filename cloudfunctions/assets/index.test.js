@@ -39,6 +39,11 @@ function createCollection(name) {
     doc(id) {
       return {
         async get() {
+          if (!collection[id]) {
+            const error = new Error('document does not exist');
+            error.errCode = 'DATABASE_DOCUMENT_NOT_EXIST';
+            throw error;
+          }
           return { data: collection[id] };
         },
         async set({ data }) {
@@ -129,7 +134,7 @@ test('rejects denied access before reading or writing assets', async () => {
   expect(documents.asset_changes).toEqual([]);
 });
 
-test.each([undefined, 'abc', Infinity, -1])(
+test.each([undefined, null, '', '   ', 'abc', Infinity, -1])(
   'rejects invalid total amount %p before writing',
   async (totalAmount) => {
     await expect(main({ action: 'update', totalAmount })).rejects.toThrow('TOTAL_AMOUNT_INVALID');
