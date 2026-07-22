@@ -9,6 +9,15 @@ function emptyForm() {
 
 function showError(error) { wx.showToast({ title: error.message || '保存失败', icon: 'none' }); }
 
+function validateForm(form) {
+  if (!form.name) return '请填写项目名称';
+  if (!form.categoryId) return '请选择品类';
+  if (!(Number(form.principal) > 0)) return '本金必须大于 0';
+  if (!form.startDate || !form.endDate) return '请填写开始日期和结束日期';
+  if (form.endDate < form.startDate) return '结束日期不能早于开始日期';
+  return '';
+}
+
 Page({
   data: {
     projectId: '', categories: [], selectedCategoryName: '', isLocked: false, lockedMessage: '', saving: false, redeeming: false,
@@ -46,13 +55,14 @@ Page({
   },
   save() {
     const form = this.data.form;
+    const error = validateForm(form);
+    if (error) {
+      wx.showToast({ title: error, icon: 'none' });
+      return;
+    }
     const principal = Number(form.principal);
     const expectedAnnualRate = Number(form.expectedAnnualRate || 0);
     const holdingDays = daysInclusive(form.startDate, form.endDate);
-    if (!Number.isFinite(holdingDays) || holdingDays < 1) {
-      showError(new Error('请填写有效的开始和结束日期'));
-      return;
-    }
     const project = {
       ...form, principal, expectedAnnualRate, fixedReward: Number(form.fixedReward || 0),
       expectedInterest: calcExpectedInterest(principal, expectedAnnualRate, holdingDays)

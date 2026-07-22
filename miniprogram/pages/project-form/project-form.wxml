@@ -1,6 +1,11 @@
 <view class="page">
   <input class="field" placeholder="项目名称" value="{{form.name}}" data-field="name" bindinput="onInput" disabled="{{isLocked}}" />
-  <picker mode="selector" range="{{categories}}" range-key="name" bindchange="onCategoryChange" disabled="{{isLocked}}"><view class="field picker-field">{{selectedCategoryName || '选择品类'}}</view></picker>
+  <view wx:if="{{categories.length > 0}}">
+    <picker mode="selector" range="{{categories}}" range-key="name" bindchange="onCategoryChange" disabled="{{isLocked}}">
+      <view class="field picker-field">{{selectedCategoryName || '选择品类'}}</view>
+    </picker>
+  </view>
+  <view wx:else class="empty-field">请先部署并运行 bootstrap 云函数初始化品类</view>
   <input class="field" type="digit" placeholder="本金" value="{{form.principal}}" data-field="principal" bindinput="onInput" disabled="{{isLocked}}" />
   <input class="field" placeholder="开始日期 YYYY-MM-DD" value="{{form.startDate}}" data-field="startDate" bindinput="onInput" disabled="{{isLocked}}" />
   <input class="field" placeholder="结束日期 YYYY-MM-DD" value="{{form.endDate}}" data-field="endDate" bindinput="onInput" disabled="{{isLocked}}" />
