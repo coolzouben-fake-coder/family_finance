@@ -22,8 +22,9 @@ function percent(value) {
 Page({
   data: {
     loading: true,
+    dashboardReady: false,
     errorMessage: '',
-    totalAssetsValue: 0,
+    totalAssetsValue: null,
     editingAssets: false,
     savingAssets: false,
     assetAmountInput: '',
@@ -49,8 +50,15 @@ Page({
   },
 
   loadDashboard() {
-    this.setData({ loading: true, errorMessage: '' });
-    ensureAllowedSession()
+    this.setData({
+      loading: true,
+      dashboardReady: false,
+      errorMessage: '',
+      editingAssets: false,
+      assetAmountInput: '',
+      assetReasonInput: ''
+    });
+    return ensureAllowedSession()
       .then(() => Promise.all([getAssets(), listProjects()]))
       .then(([assetResult, projectResult]) => {
         const projects = projectResult.projects || [];
@@ -64,6 +72,7 @@ Page({
 
         this.setData({
           loading: false,
+          dashboardReady: true,
           totalAssetsValue: summary.totalAssets,
           metrics: {
             totalAssets: money(summary.totalAssets),
@@ -76,11 +85,12 @@ Page({
         });
       })
       .catch(() => {
-        this.setData({ loading: false, errorMessage: '资金看板加载失败，请稍后重试' });
+        this.setData({ loading: false, dashboardReady: false, errorMessage: '资金看板加载失败，请稍后重试' });
       });
   },
 
   startAssetEdit() {
+    if (!this.data.dashboardReady || this.data.loading || this.data.savingAssets) return;
     this.setData({
       editingAssets: true,
       assetAmountInput: String(this.data.totalAssetsValue),
@@ -101,6 +111,7 @@ Page({
   },
 
   saveAssets() {
+    if (!this.data.dashboardReady || this.data.loading || this.data.savingAssets) return;
     const amount = Number(this.data.assetAmountInput);
     const reason = this.data.assetReasonInput.trim();
     if (!Number.isFinite(amount) || amount < 0) {

@@ -53,7 +53,7 @@
   font-size: var(--font-caption);
 }
 
-.registrant-values {
+.row-values {
   display: flex;
   flex-direction: column;
   align-items: flex-end;

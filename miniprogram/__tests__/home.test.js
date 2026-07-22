@@ -34,6 +34,12 @@ async function flushPromises() {
   await Promise.resolve();
 }
 
+function deferred() {
+  let resolve;
+  const promise = new Promise((resolvePromise) => { resolve = resolvePromise; });
+  return { promise, resolve };
+}
+
 describe('home dashboard', () => {
   beforeEach(() => {
     jest.resetModules();
@@ -75,6 +81,20 @@ describe('home dashboard', () => {
     });
     expect(page.data.dueSoonProjects.map((project) => project._id)).toEqual(['due']);
     expect(page.data.overdueProjects.map((project) => project._id)).toEqual(['overdue']);
+    expect(page.data.dashboardReady).toBe(true);
+  });
+
+  test('does not expose or seed the asset editor before dashboard data loads', async () => {
+    const page = createHomePage();
+    const markup = fs.readFileSync(path.join(__dirname, '../pages/home/home.wxml'), 'utf8');
+
+    expect(page.data.totalAssetsValue).toBeNull();
+    expect(page.data.dashboardReady).toBe(false);
+    expect(markup).toContain('wx:if="{{dashboardReady && !editingAssets}}"');
+    page.startAssetEdit();
+
+    expect(page.data.editingAssets).toBe(false);
+    expect(page.data.assetAmountInput).toBe('');
   });
 
   test('uses distinct warning and danger accents for reminder states', () => {
@@ -92,6 +112,8 @@ describe('home dashboard', () => {
   test('updates total assets from the dashboard with a required reason', async () => {
     const page = createHomePage();
     page.data.totalAssetsValue = 50000;
+    page.data.dashboardReady = true;
+    page.data.loading = false;
     page.startAssetEdit();
     page.data.assetAmountInput = '60000';
     page.data.assetReasonInput = '工资到账';
@@ -106,6 +128,8 @@ describe('home dashboard', () => {
 
   test('does not update assets without a reason', () => {
     const page = createHomePage();
+    page.data.dashboardReady = true;
+    page.data.loading = false;
     page.data.assetAmountInput = '60000';
     page.data.assetReasonInput = '   ';
 
@@ -113,6 +137,24 @@ describe('home dashboard', () => {
 
     expect(mockUpdateAssets).not.toHaveBeenCalled();
     expect(global.wx.showToast).toHaveBeenCalledWith({ title: '请填写调整原因', icon: 'none' });
+  });
+
+  test('ignores duplicate asset saves while the first update is pending', async () => {
+    const pending = deferred();
+    mockUpdateAssets.mockReturnValue(pending.promise);
+    const page = createHomePage();
+    page.data.dashboardReady = true;
+    page.data.loading = false;
+    page.data.assetAmountInput = '60000';
+    page.data.assetReasonInput = '工资到账';
+
+    page.saveAssets();
+    page.saveAssets();
+
+    expect(mockUpdateAssets).toHaveBeenCalledTimes(1);
+    expect(page.data.savingAssets).toBe(true);
+    pending.resolve({ asset: { totalAmount: 60000 } });
+    await flushPromises();
   });
 
   test('shows a page-level error when dashboard loading fails', async () => {
@@ -124,6 +166,13 @@ describe('home dashboard', () => {
     await flushPromises();
 
     expect(page.data.loading).toBe(false);
+    expect(page.data.dashboardReady).toBe(false);
     expect(page.data.errorMessage).toBe('资金看板加载失败，请稍后重试');
+    page.startAssetEdit();
+    page.data.assetAmountInput = '0';
+    page.data.assetReasonInput = '错误覆盖';
+    page.saveAssets();
+    expect(page.data.editingAssets).toBe(false);
+    expect(mockUpdateAssets).not.toHaveBeenCalled();
   });
 });

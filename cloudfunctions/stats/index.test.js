@@ -108,14 +108,18 @@ test('calculates annual statistics using inclusive holding days', async () => {
     stats: {
       year: 2026,
       totalReturn: 223.01,
+      actualInterestTotal: 23.01,
+      actualFixedRewardTotal: 200,
       annualizedRate: expect.closeTo(0.2907095, 6),
+      interestShare: expect.closeTo(0.1031792, 6),
       fixedRewardShare: expect.closeTo(0.8968208, 6),
       monthly: [{ month: '2026-07', amount: 223.01 }],
       byCategory: [{
         categoryId: 'category-1',
         projectCount: 1,
         principal: 10000,
-        actualTotalReturn: 223.01
+        actualTotalReturn: 223.01,
+        share: 1
       }],
       byRegistrant: [{
         registrantOpenid: 'allowed-openid',
@@ -146,14 +150,18 @@ test('includes redeemed projects from every annual statistics query page', async
     stats: {
       year: 2026,
       totalReturn: 315,
+      actualInterestTotal: 210,
+      actualFixedRewardTotal: 105,
       annualizedRate: 54.75,
+      interestShare: expect.closeTo(2 / 3, 10),
       fixedRewardShare: expect.closeTo(1 / 3, 10),
       monthly: [{ month: '2026-01', amount: 315 }],
       byCategory: [{
         categoryId: 'category-1',
         projectCount: 21,
         principal: 2100,
-        actualTotalReturn: 315
+        actualTotalReturn: 315,
+        share: 1
       }],
       byRegistrant: [
         {
@@ -191,7 +199,55 @@ test('uses a nonzero net-loss denominator for fixed reward share', async () => {
   const result = await main({ action: 'annual', year: 2026 });
 
   expect(result.stats.totalReturn).toBe(-100);
+  expect(result.stats.actualInterestTotal).toBe(-150);
+  expect(result.stats.actualFixedRewardTotal).toBe(50);
+  expect(result.stats.interestShare).toBe(1.5);
   expect(result.stats.fixedRewardShare).toBe(-0.5);
+  expect(result.stats.byCategory[0].share).toBe(1);
+});
+
+test('calculates category proportions from the annual total', async () => {
+  documents.projects.push({
+    _id: 'project-3',
+    registrantOpenid: 'other-openid',
+    manualStatus: 'redeemed',
+    categoryId: 'category-2',
+    principal: 5000,
+    startDate: '2026-07-01',
+    redeemDate: '2026-07-28',
+    actualInterest: 100,
+    actualFixedReward: 0
+  });
+
+  const result = await main({ action: 'annual', year: 2026 });
+
+  expect(result.stats.totalReturn).toBe(323.01);
+  expect(result.stats.byCategory).toEqual([
+    expect.objectContaining({ categoryId: 'category-1', share: expect.closeTo(223.01 / 323.01, 10) }),
+    expect.objectContaining({ categoryId: 'category-2', share: expect.closeTo(100 / 323.01, 10) })
+  ]);
+});
+
+test('uses safe zero shares when interest and rewards offset', async () => {
+  documents.projects = [{
+    _id: 'offset-project',
+    registrantOpenid: 'allowed-openid',
+    categoryId: 'category-1',
+    manualStatus: 'redeemed',
+    principal: 10000,
+    startDate: '2026-01-01',
+    redeemDate: '2026-01-10',
+    actualInterest: -50,
+    actualFixedReward: 50
+  }];
+
+  const result = await main({ action: 'annual', year: 2026 });
+
+  expect(result.stats.actualInterestTotal).toBe(-50);
+  expect(result.stats.actualFixedRewardTotal).toBe(50);
+  expect(result.stats.interestShare).toBe(0);
+  expect(result.stats.fixedRewardShare).toBe(0);
+  expect(result.stats.byCategory[0].share).toBe(0);
 });
 
 test('rejects disabled callers and invalid enabled-user configuration', async () => {

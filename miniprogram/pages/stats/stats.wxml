@@ -16,6 +16,17 @@
     </view>
 
     <view class="section">
+      <view class="section-title">收益构成</view>
+      <view wx:for="{{returnBreakdown}}" wx:key="key" class="row">
+        <text>{{item.label}}</text>
+        <view class="row-values">
+          <text>{{item.amountText}}</text>
+          <text class="caption">占比 {{item.shareText}}</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="section">
       <view class="section-title">月度收益</view>
       <view wx:for="{{monthly}}" wx:key="month" class="row">
         <text>{{item.month}}</text>
@@ -24,10 +35,13 @@
     </view>
 
     <view class="section">
-      <view class="section-title">品类汇总</view>
+      <view class="section-title">品类收益占比</view>
       <view wx:for="{{byCategory}}" wx:key="categoryId" class="row">
         <text>{{item.categoryName}}</text>
-        <text>{{item.actualTotalReturnText}}</text>
+        <view class="row-values">
+          <text>{{item.actualTotalReturnText}}</text>
+          <text class="caption">占比 {{item.shareText}}</text>
+        </view>
       </view>
     </view>
 
@@ -35,7 +49,7 @@
       <view class="section-title">登记人汇总</view>
       <view wx:for="{{byRegistrant}}" wx:key="registrantOpenid" class="row">
         <text>{{item.registrantName}}</text>
-        <view class="registrant-values">
+        <view class="row-values">
           <text>{{item.actualTotalReturnText}}</text>
           <text class="caption">年化 {{item.annualizedRateText}}</text>
         </view>

@@ -58,6 +58,7 @@ exports.main = async (event = {}) => {
   const byCategory = {};
   const byRegistrant = {};
   let totalReturn = 0;
+  let totalInterest = 0;
   let totalFixedReward = 0;
   let weightedPrincipalDays = 0;
 
@@ -89,6 +90,7 @@ exports.main = async (event = {}) => {
     byRegistrant[project.registrantOpenid].weightedPrincipalDays += Number(project.principal || 0) * holdingDays;
 
     totalReturn += projectReturn;
+    totalInterest += Number(project.actualInterest || 0);
     totalFixedReward += Number(project.actualFixedReward || 0);
     weightedPrincipalDays += Number(project.principal || 0) * holdingDays;
   });
@@ -98,10 +100,16 @@ exports.main = async (event = {}) => {
     stats: {
       year,
       totalReturn,
+      actualInterestTotal: totalInterest,
+      actualFixedRewardTotal: totalFixedReward,
       annualizedRate: weightedPrincipalDays > 0 ? totalReturn / weightedPrincipalDays * 365 : 0,
+      interestShare: totalReturn !== 0 ? totalInterest / totalReturn : 0,
       fixedRewardShare: totalReturn !== 0 ? totalFixedReward / totalReturn : 0,
       monthly: Object.keys(monthly).sort().map((month) => ({ month, amount: monthly[month] })),
-      byCategory: Object.keys(byCategory).map((categoryId) => byCategory[categoryId]),
+      byCategory: Object.keys(byCategory).map((categoryId) => ({
+        ...byCategory[categoryId],
+        share: totalReturn !== 0 ? byCategory[categoryId].actualTotalReturn / totalReturn : 0
+      })),
       byRegistrant: Object.keys(byRegistrant).map((openid) => {
         const item = byRegistrant[openid];
         return {

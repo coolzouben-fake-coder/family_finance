@@ -37,12 +37,14 @@ function validateForm(form) {
 Page({
   data: {
     projectId: '', categories: [], users: [], selectedCategoryName: '', selectedRegistrantName: '',
+    loading: true, ready: false, errorMessage: '',
     isLocked: false, isRedeemed: false, isCancelled: false, lockedMessage: '', saving: false, redeeming: false,
     form: emptyForm(), redeemForm: { redeemDate: '', actualInterest: '', actualFixedReward: '' }
   },
   onLoad(options) {
     const projectId = options.id || '';
-    ensureAllowedSession()
+    this.setData({ projectId, loading: true, ready: false, errorMessage: '' });
+    return ensureAllowedSession()
       .then((session) => Promise.all([
         listCategories(), listUsers(), projectId ? listProjects() : Promise.resolve({ projects: [] })
       ]).then((results) => ({ session, results })))
@@ -59,7 +61,8 @@ Page({
         const isRedeemed = Boolean(project && project.manualStatus === 'redeemed');
         const isCancelled = Boolean(project && project.manualStatus === 'cancelled');
         this.setData({
-          projectId, categories, users: selectableUsers, selectedCategoryName: selectedCategory ? selectedCategory.name : '',
+          loading: false, ready: true, categories, users: selectableUsers,
+          selectedCategoryName: selectedCategory ? selectedCategory.name : '',
           selectedRegistrantName: selectedRegistrant ? selectedRegistrant.displayName : '',
           isLocked: isRedeemed || isCancelled, isRedeemed, isCancelled,
           lockedMessage: isCancelled ? '此项目已取消，记录不可再编辑。' : '基础信息已锁定，可在下方更正到账记录。',
@@ -74,7 +77,11 @@ Page({
           } : this.data.redeemForm
         });
       })
-      .catch(showError);
+      .catch(() => this.setData({
+        loading: false,
+        ready: false,
+        errorMessage: '项目加载失败，请稍后重试'
+      }));
   },
   onInput(event) { this.setData({ [`form.${event.currentTarget.dataset.field}`]: event.detail.value }); },
   onRedeemInput(event) { this.setData({ [`redeemForm.${event.currentTarget.dataset.field}`]: event.detail.value }); },
@@ -87,6 +94,7 @@ Page({
     this.setData({ selectedRegistrantName: user.displayName, 'form.registrantOpenid': user.openid });
   },
   save() {
+    if (!this.data.ready || this.data.loading || this.data.saving || this.data.redeeming) return;
     const form = this.data.form;
     const error = validateForm(form);
     if (error) {
@@ -105,6 +113,7 @@ Page({
     request.then(() => wx.navigateBack()).catch(showError).finally(() => this.setData({ saving: false }));
   },
   redeem() {
+    if (!this.data.ready || this.data.loading || !this.data.projectId || this.data.saving || this.data.redeeming) return;
     this.setData({ redeeming: true });
     const request = this.data.isRedeemed ? correctRedemption : redeemProject;
     request(this.data.projectId, {

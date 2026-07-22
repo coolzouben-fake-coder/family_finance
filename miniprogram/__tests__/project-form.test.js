@@ -50,6 +50,16 @@ async function flushPromises() {
   await Promise.resolve();
 }
 
+function deferred() {
+  let resolve;
+  let reject;
+  const promise = new Promise((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise;
+    reject = rejectPromise;
+  });
+  return { promise, resolve, reject };
+}
+
 describe('project form', () => {
   beforeEach(() => {
     jest.resetModules();
@@ -80,6 +90,8 @@ describe('project form', () => {
     [{ name: '项目', categoryId: 'category', principal: '10000', startDate: '2026-07-28', endDate: '2026-07-01' }, '结束日期不能早于开始日期']
   ])('rejects invalid project data with %s', (form, message) => {
     const page = createProjectFormPage(form);
+    page.data.loading = false;
+    page.data.ready = true;
 
     page.save();
 
@@ -91,6 +103,8 @@ describe('project form', () => {
     const page = createProjectFormPage({
       name: '项目', categoryId: 'category', principal: '10000', startDate: 'abc', endDate: 'def'
     });
+    page.data.loading = false;
+    page.data.ready = true;
     page.data.projectId = projectId;
 
     page.save();
@@ -117,6 +131,83 @@ describe('project form', () => {
     expect(mockListUsers).toHaveBeenCalledTimes(1);
     expect(page.data.form.registrantOpenid).toBe('allowed-openid');
     expect(page.data.selectedRegistrantName).toBe('成员一');
+    expect(page.data.ready).toBe(true);
+  });
+
+  test('captures the edit id synchronously and blocks submission when edit loading fails', async () => {
+    mockListProjects.mockRejectedValue(new Error('offline'));
+    const page = createProjectFormPage({
+      name: '项目', categoryId: 'category', registrantOpenid: 'allowed-openid', principal: '10000',
+      startDate: '2026-07-01', endDate: '2026-07-28'
+    });
+
+    page.onLoad({ id: 'edit-id' });
+
+    expect(page.data.projectId).toBe('edit-id');
+    expect(page.data.loading).toBe(true);
+    page.save();
+    await flushPromises();
+    await flushPromises();
+
+    expect(page.data.ready).toBe(false);
+    expect(page.data.errorMessage).toBe('项目加载失败，请稍后重试');
+    page.save();
+    expect(mockCreateProject).not.toHaveBeenCalled();
+    expect(mockUpdateProject).not.toHaveBeenCalled();
+  });
+
+  test('ignores duplicate project saves while the first request is pending', async () => {
+    const pending = deferred();
+    mockCreateProject.mockReturnValue(pending.promise);
+    const page = createProjectFormPage();
+    page.onLoad({});
+    await flushPromises();
+    await flushPromises();
+    page.data.form = {
+      name: '项目', categoryId: 'category', registrantOpenid: 'allowed-openid', principal: '10000',
+      startDate: '2026-07-01', endDate: '2026-07-28', expectedAnnualRate: '', fixedReward: '', remark: ''
+    };
+
+    page.save();
+    page.save();
+
+    expect(mockCreateProject).toHaveBeenCalledTimes(1);
+    expect(page.data.saving).toBe(true);
+    pending.resolve();
+    await flushPromises();
+    expect(page.data.saving).toBe(false);
+  });
+
+  test.each([
+    [false, mockRedeemProject, mockCorrectRedemption],
+    [true, mockCorrectRedemption, mockRedeemProject]
+  ])('ignores duplicate redemption mutations while pending (redeemed: %s)', async (isRedeemed, expectedRequest, otherRequest) => {
+    const pending = deferred();
+    expectedRequest.mockReturnValue(pending.promise);
+    const page = createProjectFormPage();
+    page.data.ready = true;
+    page.data.loading = false;
+    page.data.projectId = 'project-id';
+    page.data.isRedeemed = isRedeemed;
+    page.data.redeemForm = { redeemDate: '2026-07-28', actualInterest: '20', actualFixedReward: '100' };
+
+    page.redeem();
+    page.redeem();
+
+    expect(expectedRequest).toHaveBeenCalledTimes(1);
+    expect(otherRequest).not.toHaveBeenCalled();
+    expect(page.data.redeeming).toBe(true);
+    pending.resolve();
+    await flushPromises();
+    expect(page.data.redeeming).toBe(false);
+  });
+
+  test('renders loading and error states and disables mutation controls while busy', () => {
+    const markup = require('fs').readFileSync(require('path').join(__dirname, '../pages/project-form/project-form.wxml'), 'utf8');
+
+    expect(markup).toContain('wx:if="{{loading}}"');
+    expect(markup).toContain('wx:elif="{{errorMessage}}"');
+    expect(markup).toContain('disabled="{{saving || redeeming}}"');
   });
 
   test('submits corrections for redeemed projects through the dedicated action', async () => {

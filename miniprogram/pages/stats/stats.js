@@ -17,6 +17,7 @@ Page({
     totalReturn: '¥0.00',
     annualizedRate: '0.00%',
     fixedRewardShare: '0.00%',
+    returnBreakdown: [],
     monthly: [],
     byCategory: [],
     byRegistrant: []
@@ -42,13 +43,24 @@ Page({
           totalReturn: money(stats.totalReturn),
           annualizedRate: percent(stats.annualizedRate),
           fixedRewardShare: percent(stats.fixedRewardShare),
+          returnBreakdown: [
+            {
+              key: 'interest', label: '实际利息', amountText: money(stats.actualInterestTotal),
+              shareText: percent(stats.interestShare)
+            },
+            {
+              key: 'fixedReward', label: '实际固定奖励', amountText: money(stats.actualFixedRewardTotal),
+              shareText: percent(stats.fixedRewardShare)
+            }
+          ],
           monthly: stats.monthly.map((item) => ({ ...item, amountText: money(item.amount) })),
           byCategory: stats.byCategory.map((item) => {
             const category = categories.find((candidate) => candidate._id === item.categoryId);
             return {
               ...item,
               categoryName: category ? category.name : '未分类',
-              actualTotalReturnText: money(item.actualTotalReturn)
+              actualTotalReturnText: money(item.actualTotalReturn),
+              shareText: percent(item.share)
             };
           }),
           byRegistrant: stats.byRegistrant.map((item) => {
