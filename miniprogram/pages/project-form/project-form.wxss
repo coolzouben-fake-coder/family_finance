@@ -1,0 +1,5 @@
+.field, .textarea { width: 100%; margin-bottom: 16rpx; padding: 20rpx; border-radius: var(--radius-card); background: var(--color-grouped-background); box-sizing: border-box; color: var(--color-primary-text); font-size: var(--font-body); }
+.picker-field { color: var(--color-secondary-text); }
+.textarea { min-height: 160rpx; }
+.redeem, .redeemed-note { margin-top: var(--space-section); padding: 24rpx; }
+.redeem .section-title { margin-bottom: 20rpx; }

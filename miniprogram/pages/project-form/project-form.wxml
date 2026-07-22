@@ -1,0 +1,19 @@
+<view class="page">
+  <input class="field" placeholder="项目名称" value="{{form.name}}" data-field="name" bindinput="onInput" disabled="{{isLocked}}" />
+  <picker mode="selector" range="{{categories}}" range-key="name" bindchange="onCategoryChange" disabled="{{isLocked}}"><view class="field picker-field">{{selectedCategoryName || '选择品类'}}</view></picker>
+  <input class="field" type="digit" placeholder="本金" value="{{form.principal}}" data-field="principal" bindinput="onInput" disabled="{{isLocked}}" />
+  <input class="field" placeholder="开始日期 YYYY-MM-DD" value="{{form.startDate}}" data-field="startDate" bindinput="onInput" disabled="{{isLocked}}" />
+  <input class="field" placeholder="结束日期 YYYY-MM-DD" value="{{form.endDate}}" data-field="endDate" bindinput="onInput" disabled="{{isLocked}}" />
+  <input class="field" type="digit" placeholder="预期年化，如 0.03" value="{{form.expectedAnnualRate}}" data-field="expectedAnnualRate" bindinput="onInput" disabled="{{isLocked}}" />
+  <input class="field" type="digit" placeholder="固定奖励" value="{{form.fixedReward}}" data-field="fixedReward" bindinput="onInput" disabled="{{isLocked}}" />
+  <textarea class="textarea" placeholder="备注" value="{{form.remark}}" data-field="remark" bindinput="onInput" disabled="{{isLocked}}" />
+  <button wx:if="{{!isLocked}}" class="primary-button" loading="{{saving}}" bindtap="save">保存</button>
+  <view wx:if="{{projectId && !isLocked}}" class="redeem surface">
+    <view class="section-title">确认到账</view>
+    <input class="field" placeholder="到账日期 YYYY-MM-DD" value="{{redeemForm.redeemDate}}" data-field="redeemDate" bindinput="onRedeemInput" />
+    <input class="field" type="digit" placeholder="实际利息" value="{{redeemForm.actualInterest}}" data-field="actualInterest" bindinput="onRedeemInput" />
+    <input class="field" type="digit" placeholder="实际固定奖励" value="{{redeemForm.actualFixedReward}}" data-field="actualFixedReward" bindinput="onRedeemInput" />
+    <button class="secondary-button" loading="{{redeeming}}" bindtap="redeem">确认到账</button>
+  </view>
+  <view wx:if="{{isLocked}}" class="redeemed-note surface caption">{{lockedMessage}}</view>
+</view>

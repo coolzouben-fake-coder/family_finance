@@ -1,0 +1,11 @@
+<view class="page">
+  <button class="primary-button" bindtap="goCreate">新增项目</button>
+  <view wx:if="{{loading}}" class="empty caption">正在加载项目</view>
+  <view wx:elif="{{projects.length}}" class="list">
+    <project-card wx:for="{{projects}}" wx:key="_id" project="{{item}}" bind:open="openProject" />
+  </view>
+  <view wx:else class="empty surface">
+    <view class="empty-title">暂无理财项目</view>
+    <view class="caption">新增一笔项目后，可在这里查看收益和状态。</view>
+  </view>
+</view>

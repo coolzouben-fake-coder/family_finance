@@ -1,0 +1,7 @@
+.card { padding: 24rpx; }
+.top, .row { display: flex; align-items: center; justify-content: space-between; gap: 16rpx; }
+.name { min-width: 0; font-size: 30rpx; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.status { flex: 0 0 auto; color: var(--color-accent); font-size: var(--font-caption); }
+.status-redeemed { color: var(--color-success); }
+.status-cancelled { color: var(--color-tertiary-text); }
+.row { margin-top: 14rpx; color: var(--color-secondary-text); font-size: var(--font-caption); }

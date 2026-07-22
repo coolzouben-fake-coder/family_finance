@@ -1,0 +1,14 @@
+<view class="card surface" bindtap="onTap">
+  <view class="top">
+    <view class="name">{{project.name}}</view>
+    <view class="status status-{{project.manualStatus}}">{{project.displayStatus}}</view>
+  </view>
+  <view class="row">
+    <text>本金 {{project.principalText}}</text>
+    <text>{{project.dateRange}}</text>
+  </view>
+  <view class="row">
+    <text>预期 {{project.expectedTotalText}}</text>
+    <text>实际年化 {{project.actualAnnualRateText}}</text>
+  </view>
+</view>
