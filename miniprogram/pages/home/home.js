@@ -83,7 +83,11 @@ Page({
       assetReasonInput: ''
     });
     return ensureAllowedSession()
-      .then(() => Promise.all([getAssets(), listProjects(), listAssetChanges()]))
+      .then(() => Promise.all([
+        getAssets(),
+        listProjects(),
+        listAssetChanges().catch(() => ({ changes: [] }))
+      ]))
       .then(([assetResult, projectResult, changeResult]) => {
         const projects = projectResult.projects || [];
         const changes = changeResult.changes || [];

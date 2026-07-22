@@ -239,4 +239,18 @@ describe('home dashboard', () => {
     expect(page.data.editingAssets).toBe(false);
     expect(mockUpdateAssets).not.toHaveBeenCalled();
   });
+
+  test('keeps dashboard usable when asset change records fail to load', async () => {
+    mockListAssetChanges.mockRejectedValue(new Error('records unavailable'));
+    const page = createHomePage();
+
+    page.loadDashboard();
+    await flushPromises();
+    await flushPromises();
+
+    expect(page.data.dashboardReady).toBe(true);
+    expect(page.data.errorMessage).toBe('');
+    expect(page.data.metrics.totalAssets).toBe('¥50000.00');
+    expect(page.data.assetChanges).toEqual([]);
+  });
 });
