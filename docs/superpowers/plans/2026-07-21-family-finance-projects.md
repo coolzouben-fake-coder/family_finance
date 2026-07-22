@@ -1349,8 +1349,8 @@ Expected: commit succeeds if this directory has been initialized as a git reposi
 - Modify: `miniprogram/services/cloud.js`
 
 **Interfaces:**
-- Produces: cloud function `projects` actions `list`, `create`, `update`, `redeem`, `cancel`, `remove`.
-- Produces: service methods `listProjects(filters)`, `createProject(project)`, `updateProject(id, project)`, `redeemProject(id, redeemData)`.
+- Produces: cloud function `projects` actions `list`, `listCategories`, `create`, `update`, `redeem`, `cancel`, `remove`.
+- Produces: service methods `listProjects(filters)`, `listCategories()`, `createProject(project)`, `updateProject(id, project)`, `redeemProject(id, redeemData)`.
 - Consumes: `daysInclusive`, `calcExpectedInterest`, `calcActualTotalReturn`, `calcActualAnnualRate`.
 
 - [ ] **Step 1: Implement projects cloud function**
@@ -1399,6 +1399,14 @@ async function listProjects(event) {
   if (event.registrantOpenid) query.registrantOpenid = event.registrantOpenid;
 
   const result = await db.collection('projects').where(query).orderBy('endDate', 'asc').get();
+  return result.data;
+}
+
+async function listCategories() {
+  const result = await db.collection('categories')
+    .where({ enabled: true })
+    .orderBy('sortOrder', 'asc')
+    .get();
   return result.data;
 }
 
@@ -1470,6 +1478,7 @@ exports.main = async (event) => {
   await requireAllowed(openid);
 
   if (event.action === 'list') return { ok: true, projects: await listProjects(event) };
+  if (event.action === 'listCategories') return { ok: true, categories: await listCategories() };
   if (event.action === 'create') return { ok: true, project: await createProject(openid, event.project) };
   if (event.action === 'update') return { ok: true, project: await updateProject(event.id, event.project) };
   if (event.action === 'redeem') return { ok: true, project: await redeemProject(event.id, event.redeemData) };
@@ -1507,6 +1516,10 @@ function listProjects(filters = {}) {
   return callCloud('projects', { action: 'list', ...filters });
 }
 
+function listCategories() {
+  return callCloud('projects', { action: 'listCategories' });
+}
+
 function createProject(project) {
   return callCloud('projects', { action: 'create', project });
 }
@@ -1524,6 +1537,7 @@ module.exports = {
   getAssets,
   updateAssets,
   listProjects,
+  listCategories,
   createProject,
   updateProject,
   redeemProject
@@ -1712,7 +1726,9 @@ Write `miniprogram/pages/project-form/project-form.wxml`:
 ```xml
 <view class="page">
   <input class="field" placeholder="项目名称" value="{{form.name}}" data-field="name" bindinput="onInput" />
-  <input class="field" placeholder="品类 ID" value="{{form.categoryId}}" data-field="categoryId" bindinput="onInput" />
+  <picker mode="selector" range="{{categories}}" range-key="name" bindchange="onCategoryChange">
+    <view class="field">{{selectedCategoryName || '选择品类'}}</view>
+  </picker>
   <input class="field" type="digit" placeholder="本金" value="{{form.principal}}" data-field="principal" bindinput="onInput" />
   <input class="field" placeholder="开始日期 YYYY-MM-DD" value="{{form.startDate}}" data-field="startDate" bindinput="onInput" />
   <input class="field" placeholder="结束日期 YYYY-MM-DD" value="{{form.endDate}}" data-field="endDate" bindinput="onInput" />
@@ -1754,12 +1770,14 @@ Write `miniprogram/pages/project-form/project-form.js`:
 
 ```js
 const { ensureAllowedSession } = require('../../services/session');
-const { createProject } = require('../../services/cloud');
+const { createProject, listCategories } = require('../../services/cloud');
 const { daysInclusive } = require('../../utils/date');
 const { calcExpectedInterest } = require('../../utils/finance');
 
 Page({
   data: {
+    categories: [],
+    selectedCategoryName: '',
     form: {
       name: '',
       categoryId: '',
@@ -1773,12 +1791,24 @@ Page({
   },
 
   onLoad() {
-    ensureAllowedSession();
+    ensureAllowedSession().then(() => {
+      listCategories().then(({ categories }) => {
+        this.setData({ categories });
+      });
+    });
   },
 
   onInput(event) {
     const field = event.currentTarget.dataset.field;
     this.setData({ [`form.${field}`]: event.detail.value });
+  },
+
+  onCategoryChange(event) {
+    const category = this.data.categories[Number(event.detail.value)];
+    this.setData({
+      selectedCategoryName: category.name,
+      'form.categoryId': category._id
+    });
   },
 
   save() {
@@ -2274,7 +2304,7 @@ Expected: commit succeeds if this directory has been initialized as a git reposi
 
 ---
 
-### Task 8: Polish Validation, Category Selection, And Manual QA
+### Task 8: Polish Validation, Category Empty State, And Manual QA
 
 **Files:**
 - Modify: `miniprogram/pages/project-form/project-form.js`
@@ -2285,44 +2315,34 @@ Expected: commit succeeds if this directory has been initialized as a git reposi
 - Create: `docs/qa/first-version-checklist.md`
 
 **Interfaces:**
-- Consumes: `categories` collection populated by `bootstrap`.
+- Consumes: `categories` collection populated by `bootstrap` and loaded by `listCategories()`.
 - Produces: form validation messages for invalid principal/date/redeem data.
 - Produces: manual QA checklist in `docs/qa/first-version-checklist.md`.
 
-- [ ] **Step 1: Replace category ID input with picker**
+- [ ] **Step 1: Add category empty state for the picker**
 
-Update `miniprogram/pages/project-form/project-form.wxml` category section:
+Update the category picker section in `miniprogram/pages/project-form/project-form.wxml`:
 
 ```xml
-<picker mode="selector" range="{{categories}}" range-key="name" bindchange="onCategoryChange">
-  <view class="field">{{selectedCategoryName || '选择品类'}}</view>
-</picker>
+<view wx:if="{{categories.length > 0}}">
+  <picker mode="selector" range="{{categories}}" range-key="name" bindchange="onCategoryChange">
+    <view class="field">{{selectedCategoryName || '选择品类'}}</view>
+  </picker>
+</view>
+<view wx:else class="empty-field">请先部署并运行 bootstrap 云函数初始化品类</view>
 ```
 
-Update `miniprogram/pages/project-form/project-form.js` data and handler:
+Append to `miniprogram/pages/project-form/project-form.wxss`:
 
-```js
-data: {
-  categories: [],
-  selectedCategoryName: '',
-  form: {
-    name: '',
-    categoryId: '',
-    principal: '',
-    startDate: '',
-    endDate: '',
-    expectedAnnualRate: '',
-    fixedReward: '',
-    remark: ''
-  }
-},
-
-onCategoryChange(event) {
-  const category = this.data.categories[Number(event.detail.value)];
-  this.setData({
-    selectedCategoryName: category.name,
-    'form.categoryId': category._id
-  });
+```css
+.empty-field {
+  margin-bottom: 16rpx;
+  padding: 24rpx;
+  border-radius: 8rpx;
+  background: #ffffff;
+  color: #8e8e93;
+  box-sizing: border-box;
+  font-size: 26rpx;
 }
 ```
 
