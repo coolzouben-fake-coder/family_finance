@@ -21,8 +21,8 @@
   <view wx:elif="{{dashboardReady && editingAssets}}" class="asset-editor surface">
     <view class="section-title">调整家庭总资产</view>
     <view class="asset-type-control">
-      <button class="asset-type-button {{assetChangeType === 'deposit' ? 'asset-type-button--active' : ''}}" data-type="deposit" bindtap="onAssetTypeChange">存入</button>
-      <button class="asset-type-button {{assetChangeType === 'withdraw' ? 'asset-type-button--active' : ''}}" data-type="withdraw" bindtap="onAssetTypeChange">支取</button>
+      <button class="asset-type-button {{depositTypeClass}}" data-type="deposit" bindtap="onAssetTypeChange">存入</button>
+      <button class="asset-type-button {{withdrawTypeClass}}" data-type="withdraw" bindtap="onAssetTypeChange">支取</button>
     </view>
     <input class="asset-field" type="digit" value="{{assetAmountInput}}" placeholder="调整金额" bindinput="onAssetInput" />
     <input class="asset-field" value="{{assetReasonInput}}" maxlength="100" placeholder="调整原因" bindinput="onAssetReasonInput" />
@@ -35,7 +35,7 @@
   <view wx:if="{{dashboardReady}}" class="section asset-change-section">
     <view class="asset-change-header" bindtap="toggleAssetChanges">
       <view class="section-title">调整记录</view>
-      <view class="caption">{{showingAssetChanges ? '收起' : '查看全部'}}</view>
+      <view class="caption">{{assetChangeToggleText}}</view>
     </view>
     <view wx:if="{{showingAssetChanges}}">
       <view wx:if="{{assetChanges.length === 0}}" class="empty">暂无调整记录</view>

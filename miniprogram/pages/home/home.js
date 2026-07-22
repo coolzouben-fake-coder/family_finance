@@ -37,6 +37,13 @@ function formatAssetChange(change) {
   };
 }
 
+function assetTypeClasses(type) {
+  return {
+    depositTypeClass: type === 'deposit' ? 'asset-type-button--active' : '',
+    withdrawTypeClass: type === 'withdraw' ? 'asset-type-button--active' : ''
+  };
+}
+
 Page({
   data: {
     loading: true,
@@ -46,7 +53,10 @@ Page({
     editingAssets: false,
     savingAssets: false,
     showingAssetChanges: false,
+    assetChangeToggleText: '查看全部',
     assetChangeType: 'deposit',
+    depositTypeClass: 'asset-type-button--active',
+    withdrawTypeClass: '',
     assetAmountInput: '',
     assetReasonInput: '',
     metrics: {
@@ -79,6 +89,7 @@ Page({
       errorMessage: '',
       editingAssets: false,
       assetChangeType: 'deposit',
+      ...assetTypeClasses('deposit'),
       assetAmountInput: '',
       assetReasonInput: ''
     });
@@ -126,6 +137,7 @@ Page({
     this.setData({
       editingAssets: true,
       assetChangeType: 'deposit',
+      ...assetTypeClasses('deposit'),
       assetAmountInput: '',
       assetReasonInput: ''
     });
@@ -146,11 +158,15 @@ Page({
   onAssetTypeChange(event) {
     const type = event.currentTarget.dataset.type;
     if (type !== 'deposit' && type !== 'withdraw') return;
-    this.setData({ assetChangeType: type });
+    this.setData({ assetChangeType: type, ...assetTypeClasses(type) });
   },
 
   toggleAssetChanges() {
-    this.setData({ showingAssetChanges: !this.data.showingAssetChanges });
+    const showingAssetChanges = !this.data.showingAssetChanges;
+    this.setData({
+      showingAssetChanges,
+      assetChangeToggleText: showingAssetChanges ? '收起' : '查看全部'
+    });
   },
 
   saveAssets() {

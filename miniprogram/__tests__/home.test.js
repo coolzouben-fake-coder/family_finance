@@ -214,8 +214,21 @@ describe('home dashboard', () => {
 
     page.toggleAssetChanges();
     expect(page.data.showingAssetChanges).toBe(true);
+    expect(page.data.assetChangeToggleText).toBe('收起');
     page.toggleAssetChanges();
     expect(page.data.showingAssetChanges).toBe(false);
+    expect(page.data.assetChangeToggleText).toBe('查看全部');
+  });
+
+  test('keeps home markup free of ternary expressions for stable mini-program compilation', () => {
+    const markup = fs.readFileSync(path.join(__dirname, '../pages/home/home.wxml'), 'utf8');
+
+    expect(markup).not.toContain(' ? ');
+    expect(markup).not.toContain("assetChangeType === 'deposit'");
+    expect(markup).not.toContain("assetChangeType === 'withdraw'");
+    expect(markup).toContain('{{assetChangeToggleText}}');
+    expect(markup).toContain('{{depositTypeClass}}');
+    expect(markup).toContain('{{withdrawTypeClass}}');
   });
 
   test('shows a page-level error when dashboard loading fails', async () => {
