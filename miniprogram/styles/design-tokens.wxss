@@ -1,0 +1,102 @@
+page {
+  --color-system-background: #f5f5f7;
+  --color-grouped-background: #ffffff;
+  --color-primary-text: #1d1d1f;
+  --color-secondary-text: #6e6e73;
+  --color-tertiary-text: #8e8e93;
+  --color-separator: #e5e5ea;
+  --color-accent: #007aff;
+  --color-success: #34c759;
+  --color-warning: #ff9500;
+  --color-danger: #ff3b30;
+  --radius-card: 8rpx;
+  --space-page-x: 32rpx;
+  --space-page-y: 24rpx;
+  --space-section: 32rpx;
+  --font-title: 44rpx;
+  --font-section: 32rpx;
+  --font-metric: 40rpx;
+  --font-body: 28rpx;
+  --font-caption: 24rpx;
+}
+
+.page {
+  min-height: 100vh;
+  padding: var(--space-page-y) var(--space-page-x);
+  background: var(--color-system-background);
+  box-sizing: border-box;
+  color: var(--color-primary-text);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+  letter-spacing: 0;
+}
+
+.surface {
+  border-radius: var(--radius-card);
+  background: var(--color-grouped-background);
+}
+
+.section-title {
+  color: var(--color-primary-text);
+  font-size: var(--font-section);
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.caption {
+  color: var(--color-secondary-text);
+  font-size: var(--font-caption);
+  line-height: 1.4;
+}
+
+.primary-button {
+  height: 88rpx;
+  border-radius: var(--radius-card);
+  background: var(--color-accent);
+  color: #ffffff;
+  font-size: var(--font-body);
+  font-weight: 600;
+  line-height: 88rpx;
+}
+
+.secondary-button {
+  height: 88rpx;
+  border: 1rpx solid var(--color-separator);
+  border-radius: var(--radius-card);
+  background: var(--color-grouped-background);
+  color: var(--color-accent);
+  font-size: var(--font-body);
+  font-weight: 600;
+  line-height: 88rpx;
+}
+
+.status-label {
+  min-width: 112rpx;
+  padding: 8rpx 12rpx;
+  border-radius: var(--radius-card);
+  box-sizing: border-box;
+  color: #ffffff;
+  font-size: 22rpx;
+  font-weight: 600;
+  line-height: 1.2;
+  text-align: center;
+}
+
+.status-active {
+  background: var(--color-accent);
+}
+
+.status-due-soon {
+  background: var(--color-warning);
+}
+
+.status-overdue {
+  background: var(--color-danger);
+}
+
+.status-redeemed {
+  background: var(--color-success);
+}
+
+.status-cancelled {
+  background: var(--color-tertiary-text);
+}
