@@ -1,15 +1,17 @@
-function callCloud(name, data = {}) {
+function callCloud(name, data = {}, options = {}) {
   return wx.cloud.callFunction({ name, data })
     .then((response) => response.result)
     .catch((error) => {
-      console.error('[cloud function failed]', {
-        name,
-        action: data.action || '',
-        errCode: error && error.errCode,
-        errMsg: error && error.errMsg,
-        message: error && error.message,
-        error
-      });
+      if (!options.silent) {
+        console.error('[cloud function failed]', {
+          name,
+          action: data.action || '',
+          errCode: error && error.errCode,
+          errMsg: error && error.errMsg,
+          message: error && error.message,
+          error
+        });
+      }
       throw error;
     });
 }
@@ -22,7 +24,7 @@ function updateAssets(type, amount, reason) {
   return callCloud('assets', { action: 'update', type, amount, reason });
 }
 
-function listAssetChanges() { return callCloud('assets', { action: 'listChanges' }); }
+function listAssetChanges() { return callCloud('assets', { action: 'listChanges' }, { silent: true }); }
 
 function listProjects(filters = {}) { return callCloud('projects', { action: 'list', ...filters }); }
 function listCategories() { return callCloud('projects', { action: 'listCategories' }); }
