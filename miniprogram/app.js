@@ -13,6 +13,9 @@ App({
       return;
     }
 
-    wx.cloud.init({ traceUser: true });
+    wx.cloud.init({
+      env: 'cloudbase-d7gx0ikiwa58549a4',
+      traceUser: true
+    });
   }
 });
