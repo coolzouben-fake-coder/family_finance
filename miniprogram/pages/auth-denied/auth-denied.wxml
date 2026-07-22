@@ -1,0 +1,4 @@
+<view class="page denied">
+  <view class="title">无访问权限</view>
+  <view class="desc">当前微信账号不在家庭成员白名单中。</view>
+</view>

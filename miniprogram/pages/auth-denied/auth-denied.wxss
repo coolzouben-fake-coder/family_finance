@@ -1,0 +1,17 @@
+.denied {
+  display: flex;
+  min-height: 100vh;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.title {
+  font-size: var(--font-title);
+  font-weight: 700;
+}
+
+.desc {
+  margin-top: 16rpx;
+  color: var(--color-secondary-text);
+  font-size: var(--font-body);
+}
