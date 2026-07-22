@@ -22,3 +22,31 @@
   gap: 16rpx;
   margin-top: var(--space-section);
 }
+
+.section {
+  margin-top: var(--space-section);
+}
+
+.section-title {
+  margin-bottom: 16rpx;
+}
+
+.empty,
+.reminder {
+  padding: 24rpx;
+  border-radius: var(--radius-card);
+  background: var(--color-grouped-background);
+}
+
+.empty {
+  color: var(--color-secondary-text);
+  font-size: var(--font-caption);
+}
+
+.reminder {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 12rpx;
+  color: var(--color-primary-text);
+  font-size: var(--font-caption);
+}
