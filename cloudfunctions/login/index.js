@@ -10,6 +10,23 @@ exports.main = async () => {
   const openid = wxContext.OPENID;
   const enabledResult = await db.collection('users').where({ enabled: true }).get();
   const whitelistValid = enabledResult.data.length <= MAX_ENABLED_USERS;
+  if (whitelistValid && enabledResult.data.length === 0 && typeof openid === 'string' && openid) {
+    const user = {
+      openid,
+      nickname: '我',
+      role: 'member',
+      enabled: true,
+      createdAt: db.serverDate(),
+      updatedAt: db.serverDate()
+    };
+    await db.collection('users').add({ data: user });
+    return {
+      openid,
+      allowed: true,
+      user,
+      whitelistValid
+    };
+  }
   const user = whitelistValid
     ? enabledResult.data.find((candidate) => candidate.openid === openid) || null
     : null;

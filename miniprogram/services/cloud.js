@@ -1,5 +1,17 @@
 function callCloud(name, data = {}) {
-  return wx.cloud.callFunction({ name, data }).then((response) => response.result);
+  return wx.cloud.callFunction({ name, data })
+    .then((response) => response.result)
+    .catch((error) => {
+      console.error('[cloud function failed]', {
+        name,
+        action: data.action || '',
+        errCode: error && error.errCode,
+        errMsg: error && error.errMsg,
+        message: error && error.message,
+        error
+      });
+      throw error;
+    });
 }
 
 function getAssets() {

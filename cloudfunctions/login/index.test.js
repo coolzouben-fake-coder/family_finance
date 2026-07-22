@@ -28,6 +28,10 @@ function createCollection() {
           };
         }
       };
+    },
+    async add({ data }) {
+      users.push({ _id: `user-${users.length + 1}`, ...data });
+      return { _id: `user-${users.length}` };
     }
   };
 }
@@ -40,7 +44,10 @@ const mockCloud = {
   },
   database() {
     return {
-      collection: createCollection
+      collection: createCollection,
+      serverDate() {
+        return 'server-date';
+      }
     };
   }
 };
@@ -80,4 +87,37 @@ test('denies login when more than two enabled users are configured', async () =>
     user: null,
     whitelistValid: false
   });
+});
+
+test('auto-provisions the first real mini program caller when no enabled users exist', async () => {
+  users = [{ _id: 'placeholder-disabled', openid: 'placeholder-disabled', enabled: false }];
+
+  await expect(main()).resolves.toEqual({
+    openid: 'allowed-openid',
+    allowed: true,
+    user: expect.objectContaining({
+      openid: 'allowed-openid',
+      nickname: '我',
+      role: 'member',
+      enabled: true
+    }),
+    whitelistValid: true
+  });
+  expect(users).toEqual([
+    { _id: 'placeholder-disabled', openid: 'placeholder-disabled', enabled: false },
+    expect.objectContaining({ openid: 'allowed-openid', enabled: true })
+  ]);
+});
+
+test('does not auto-provision calls without a real OpenID', async () => {
+  users = [{ _id: 'placeholder-disabled', openid: 'placeholder-disabled', enabled: false }];
+  currentOpenid = undefined;
+
+  await expect(main()).resolves.toEqual({
+    openid: undefined,
+    allowed: false,
+    user: null,
+    whitelistValid: true
+  });
+  expect(users).toEqual([{ _id: 'placeholder-disabled', openid: 'placeholder-disabled', enabled: false }]);
 });
