@@ -19,17 +19,19 @@ const BUILTIN_CATEGORIES = [
 async function requireBootstrapAllowed(openid) {
   const configuredOpenids = (process.env.BOOTSTRAP_OPENIDS || '')
     .split(',')
-    .map((value) => value.trim())
-    .filter(Boolean);
+    .map((value) => value.trim());
+
+  if (
+    configuredOpenids.length !== 2
+    || configuredOpenids.some((value) => !value)
+    || new Set(configuredOpenids).size !== 2
+  ) {
+    const error = new Error('BOOTSTRAP_OPENIDS must contain exactly two OpenIDs');
+    error.code = 'BOOTSTRAP_OPENIDS_REQUIRED';
+    throw error;
+  }
 
   if (configuredOpenids.includes(openid)) return;
-
-  const users = await db.collection('users')
-    .where({ openid, enabled: true })
-    .limit(1)
-    .get();
-
-  if (users.data.length > 0) return;
 
   const error = new Error('Bootstrap access denied');
   error.code = 'BOOTSTRAP_FORBIDDEN';
@@ -41,33 +43,49 @@ exports.main = async () => {
   await requireBootstrapAllowed(openid);
 
   const categories = db.collection('categories');
+  let categoriesInserted = 0;
 
   for (let index = 0; index < BUILTIN_CATEGORIES.length; index += 1) {
     const category = BUILTIN_CATEGORIES[index];
-    await categories.doc(category.id).set({
+    const categoryDocument = categories.doc(category.id);
+    const existing = await categoryDocument.get();
+    const mutableFields = {
+      name: category.name,
+      type: 'builtin',
+      enabled: true,
+      sortOrder: index + 1,
+      updatedAt: db.serverDate()
+    };
+
+    if (existing.data.length > 0) {
+      await categoryDocument.update({ data: mutableFields });
+    } else {
+      await categoryDocument.set({
+        data: {
+          ...mutableFields,
+          createdAt: db.serverDate()
+        }
+      });
+      categoriesInserted += 1;
+    }
+  }
+
+  const settingsDocument = db.collection('settings').doc('default');
+  const existingSettings = await settingsDocument.get();
+  if (existingSettings.data.length === 0) {
+    await settingsDocument.set({
       data: {
-        name: category.name,
-        type: 'builtin',
-        enabled: true,
-        sortOrder: index + 1,
-        createdAt: db.serverDate(),
+        dueSoonDays: 3,
+        defaultYear: new Date().getFullYear(),
+        subscriptionReminderEnabled: false,
         updatedAt: db.serverDate()
       }
     });
   }
 
-  await db.collection('settings').doc('default').set({
-    data: {
-      dueSoonDays: 3,
-      defaultYear: new Date().getFullYear(),
-      subscriptionReminderEnabled: false,
-      updatedAt: db.serverDate()
-    }
-  });
-
   return {
     ok: true,
-    categoriesInserted: BUILTIN_CATEGORIES.length,
+    categoriesInserted,
     settingsReady: true
   };
 };

@@ -56,3 +56,23 @@
 
 - `cloudfunctions/bootstrap/index.js`
 - `.superpowers/sdd/task-1-report.md`
+
+## Re-Review Fix: Bounded Bootstrap And Non-Destructive Initialization
+
+### What I Fixed
+
+- Made `BOOTSTRAP_OPENIDS` mandatory before any database access. It must specify exactly two distinct, non-empty comma-separated OpenIDs; invalid or absent configuration throws `BOOTSTRAP_OPENIDS_REQUIRED`.
+- Removed the enabled `users` collection fallback. Only either of the two configured OpenIDs may invoke bootstrap; other callers receive `BOOTSTRAP_FORBIDDEN`.
+- Changed category initialization to read each deterministic category document first. Existing documents update only mutable fields and retain `createdAt`; missing documents are created and increment `categoriesInserted`.
+- Changed `settings/default` initialization to read first and create defaults only when missing. Existing settings remain unchanged.
+
+### Verification
+
+- `node --check cloudfunctions/bootstrap/index.js`: exit 0.
+- Static bootstrap contract check: exit 0; confirmed there is no `users` whitelist fallback, `BOOTSTRAP_OPENIDS` has an exact-count and non-empty validation, category and settings documents are read before write operations, and `categoriesInserted += 1` is limited to the missing-category branch.
+- `git diff --check`: exit 0.
+
+### Files Changed
+
+- `cloudfunctions/bootstrap/index.js`
+- `.superpowers/sdd/task-1-report.md`
