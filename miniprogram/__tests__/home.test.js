@@ -50,8 +50,9 @@ describe('home dashboard', () => {
     mockGetAssets.mockResolvedValue({ asset: { totalAmount: 50000 } });
     mockListProjects.mockResolvedValue({
       projects: [
-        { _id: 'due', name: '三日内到期', principal: 20000, startDate: '2026-07-01', endDate: '2026-07-24', manualStatus: 'active' },
-        { _id: 'overdue', name: '已到期', principal: 10000, startDate: '2026-07-01', endDate: '2026-07-21', manualStatus: 'active' }
+        { _id: 'due', name: '三日内到期', principal: 20000, startDate: '2026-07-01', endDate: '2026-07-24', expectedInterest: 40, fixedReward: 60, manualStatus: 'active' },
+        { _id: 'overdue', name: '已到期', principal: 10000, startDate: '2026-07-01', endDate: '2026-07-21', expectedInterest: 20, fixedReward: 30, manualStatus: 'active' },
+        { _id: 'redeemed', name: '已到账', principal: 5000, startDate: '2026-07-01', endDate: '2026-07-20', actualInterest: 25, actualFixedReward: 75, manualStatus: 'redeemed' }
       ]
     });
     mockUpdateAssets.mockResolvedValue({ asset: { totalAmount: 60000 } });
@@ -77,7 +78,9 @@ describe('home dashboard', () => {
       totalAssets: '¥50000.00',
       investedAmount: '¥30000.00',
       idleAmount: '¥20000.00',
-      utilizationRate: '60.0%'
+      utilizationRate: '60.0%',
+      inTransitReturn: '¥150.00',
+      realizedReturn: '¥100.00'
     });
     expect(page.data.dueSoonProjects.map((project) => project._id)).toEqual(['due']);
     expect(page.data.overdueProjects.map((project) => project._id)).toEqual(['overdue']);
@@ -91,6 +94,9 @@ describe('home dashboard', () => {
     expect(page.data.totalAssetsValue).toBeNull();
     expect(page.data.dashboardReady).toBe(false);
     expect(markup).toContain('wx:if="{{dashboardReady}}" class="grid"');
+    expect(markup).toContain('当前投资总金额');
+    expect(markup).toContain('在途收益');
+    expect(markup).toContain('已到账收益');
     expect(markup).toContain('wx:if="{{loading && !dashboardReady && !errorMessage}}"');
     expect(markup).toContain('wx:if="{{dashboardReady && !editingAssets}}"');
     page.startAssetEdit();

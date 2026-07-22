@@ -18,15 +18,17 @@ describe('finance utilities', () => {
     expect(calcActualAnnualRate(223.01, 10000, 28)).toBeCloseTo(0.2907, 4);
   });
 
-  test('summarizes current capital usage from active projects only', () => {
-    const result = summarizeCapital(50000, [
-      { principal: 10000, manualStatus: 'active' },
-      { principal: 8000, manualStatus: 'redeemed' },
-      { principal: 6000, manualStatus: 'cancelled' }
-    ]);
+test('summarizes current capital usage from active projects only', () => {
+  const result = summarizeCapital(50000, [
+    { principal: 10000, expectedInterest: 23.01, fixedReward: 200, manualStatus: 'active' },
+    { principal: 8000, actualInterest: 40, actualFixedReward: 88, manualStatus: 'redeemed' },
+    { principal: 6000, expectedInterest: 15, fixedReward: 20, actualInterest: 10, actualFixedReward: 10, manualStatus: 'cancelled' }
+  ]);
 
-    expect(result.investedAmount).toBe(10000);
-    expect(result.idleAmount).toBe(40000);
-    expect(result.utilizationRate).toBe(0.2);
-  });
+  expect(result.investedAmount).toBe(10000);
+  expect(result.idleAmount).toBe(40000);
+  expect(result.utilizationRate).toBe(0.2);
+  expect(result.inTransitReturn).toBe(223.01);
+  expect(result.realizedReturn).toBe(128);
+});
 });

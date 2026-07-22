@@ -33,7 +33,9 @@ Page({
       totalAssets: '¥0.00',
       investedAmount: '¥0.00',
       idleAmount: '¥0.00',
-      utilizationRate: '0.0%'
+      utilizationRate: '0.0%',
+      inTransitReturn: '¥0.00',
+      realizedReturn: '¥0.00'
     },
     dueSoonProjects: [],
     overdueProjects: []
@@ -78,7 +80,9 @@ Page({
             totalAssets: money(summary.totalAssets),
             investedAmount: money(summary.investedAmount),
             idleAmount: money(summary.idleAmount),
-            utilizationRate: percent(summary.utilizationRate)
+            utilizationRate: percent(summary.utilizationRate),
+            inTransitReturn: money(summary.inTransitReturn),
+            realizedReturn: money(summary.realizedReturn)
           },
           dueSoonProjects: decorated.filter((project) => project.dateStatus === 'due_soon'),
           overdueProjects: decorated.filter((project) => project.dateStatus === 'overdue_pending')

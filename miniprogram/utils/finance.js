@@ -16,9 +16,14 @@ function calcActualAnnualRate(actualTotalReturn, principal, holdingDays) {
 }
 
 function summarizeCapital(totalAssets, projects) {
-  const investedAmount = roundMoney(projects
-    .filter((project) => project.manualStatus === 'active')
+  const activeProjects = projects.filter((project) => project.manualStatus === 'active');
+  const redeemedProjects = projects.filter((project) => project.manualStatus === 'redeemed');
+  const investedAmount = roundMoney(activeProjects
     .reduce((sum, project) => sum + Number(project.principal || 0), 0));
+  const inTransitReturn = roundMoney(activeProjects
+    .reduce((sum, project) => sum + Number(project.expectedInterest || 0) + Number(project.fixedReward || 0), 0));
+  const realizedReturn = roundMoney(redeemedProjects
+    .reduce((sum, project) => sum + Number(project.actualInterest || 0) + Number(project.actualFixedReward || 0), 0));
 
   const idleAmount = roundMoney((Number(totalAssets) || 0) - investedAmount);
   const utilizationRate = totalAssets > 0 ? investedAmount / totalAssets : 0;
@@ -27,7 +32,9 @@ function summarizeCapital(totalAssets, projects) {
     totalAssets: roundMoney(totalAssets),
     investedAmount,
     idleAmount,
-    utilizationRate
+    utilizationRate,
+    inTransitReturn,
+    realizedReturn
   };
 }
 
