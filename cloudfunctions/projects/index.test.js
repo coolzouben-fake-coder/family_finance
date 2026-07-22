@@ -171,6 +171,21 @@ test('lists the two enabled users for registrant selection', async () => {
   });
 });
 
+test('allows project loading and creation when only the current enabled user is configured', async () => {
+  documents.users = [
+    { _id: 'user-1', openid: 'allowed-openid', nickname: '成员一', enabled: true }
+  ];
+
+  await expect(main({ action: 'listUsers' })).resolves.toEqual({
+    ok: true,
+    users: [{ openid: 'allowed-openid', nickname: '成员一', role: '' }]
+  });
+  await expect(main({ action: 'create', project })).resolves.toEqual({
+    ok: true,
+    project: expect.objectContaining({ registrantOpenid: 'allowed-openid' })
+  });
+});
+
 test('redeems using the stored start date and rejects dates before it', async () => {
   const created = await main({ action: 'create', project });
 

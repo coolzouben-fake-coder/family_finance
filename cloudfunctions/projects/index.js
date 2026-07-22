@@ -39,14 +39,14 @@ async function requireAllowed(openid) {
   return result.data;
 }
 
-function requireTwoEnabledUsers(users) {
+function requireValidEnabledUsers(users) {
   const openids = users.map((user) => user.openid);
-  if (users.length !== MAX_ENABLED_USERS || openids.some((openid) => typeof openid !== 'string' || !openid)
-    || new Set(openids).size !== MAX_ENABLED_USERS) throw new Error('AUTH_CONFIG_INVALID');
+  if (users.length < 1 || users.length > MAX_ENABLED_USERS || openids.some((openid) => typeof openid !== 'string' || !openid)
+    || new Set(openids).size !== users.length) throw new Error('AUTH_CONFIG_INVALID');
 }
 
 function selectRegistrant(requestedOpenid, fallbackOpenid, enabledUsers) {
-  requireTwoEnabledUsers(enabledUsers);
+  requireValidEnabledUsers(enabledUsers);
   const registrantOpenid = requestedOpenid || fallbackOpenid;
   if (!enabledUsers.some((user) => user.openid === registrantOpenid)) throw new Error('REGISTRANT_INVALID');
   return registrantOpenid;
@@ -105,7 +105,7 @@ async function listCategories() {
 }
 
 function listUsers(enabledUsers) {
-  requireTwoEnabledUsers(enabledUsers);
+  requireValidEnabledUsers(enabledUsers);
   return enabledUsers.map((user) => ({
     openid: user.openid,
     nickname: typeof user.nickname === 'string' ? user.nickname : '',
