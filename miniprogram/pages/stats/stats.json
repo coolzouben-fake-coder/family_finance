@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "收益统计",
+  "usingComponents": {
+    "metric-card": "../../components/metric-card/metric-card"
+  }
+}

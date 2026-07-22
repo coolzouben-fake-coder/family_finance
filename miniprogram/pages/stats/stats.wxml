@@ -1,0 +1,24 @@
+<view class="page">
+  <view class="year">{{year}}</view>
+  <view class="grid">
+    <metric-card label="年度总收益" value="{{totalReturn}}" />
+    <metric-card label="年度实际年化" value="{{annualizedRate}}" />
+    <metric-card label="固定奖励占比" value="{{fixedRewardShare}}" />
+  </view>
+
+  <view class="section">
+    <view class="section-title">月度收益</view>
+    <view wx:for="{{monthly}}" wx:key="month" class="row">
+      <text>{{item.month}}</text>
+      <text>{{item.amountText}}</text>
+    </view>
+  </view>
+
+  <view class="section">
+    <view class="section-title">登记人汇总</view>
+    <view wx:for="{{byRegistrant}}" wx:key="registrantOpenid" class="row">
+      <text>{{item.registrantOpenid}}</text>
+      <text>{{item.actualTotalReturnText}}</text>
+    </view>
+  </view>
+</view>

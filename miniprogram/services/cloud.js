@@ -15,7 +15,8 @@ function listCategories() { return callCloud('projects', { action: 'listCategori
 function createProject(project) { return callCloud('projects', { action: 'create', project }); }
 function updateProject(id, project) { return callCloud('projects', { action: 'update', id, project }); }
 function redeemProject(id, redeemData) { return callCloud('projects', { action: 'redeem', id, redeemData }); }
+function getAnnualStats(year) { return callCloud('stats', { action: 'annual', year }); }
 
 module.exports = {
-  callCloud, getAssets, updateAssets, listProjects, listCategories, createProject, updateProject, redeemProject
+  callCloud, getAssets, updateAssets, listProjects, listCategories, createProject, updateProject, redeemProject, getAnnualStats
 };
