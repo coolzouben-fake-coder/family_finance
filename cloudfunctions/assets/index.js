@@ -6,8 +6,11 @@ const db = cloud.database();
 const ASSET_DOCUMENT_ID = 'current';
 
 async function requireAllowed(openid) {
-  const result = await db.collection('users').where({ openid, enabled: true }).limit(1).get();
-  if (result.data.length === 0) {
+  const result = await db.collection('users').where({ enabled: true }).get();
+  if (result.data.length > 2) {
+    throw new Error('AUTH_CONFIG_INVALID');
+  }
+  if (!result.data.some((user) => user.openid === openid)) {
     throw new Error('AUTH_DENIED');
   }
 }
@@ -29,15 +32,15 @@ async function getAssets() {
 }
 
 async function updateAssets(openid, totalAmount, reason) {
-  if (
-    totalAmount == null
-    || (typeof totalAmount === 'string' && totalAmount.trim() === '')
-  ) {
+  const isNumber = typeof totalAmount === 'number' && Number.isFinite(totalAmount);
+  const isDecimalString = typeof totalAmount === 'string'
+    && /^\d+(?:\.\d+)?$/.test(totalAmount);
+  if (!isNumber && !isDecimalString) {
     throw new Error('TOTAL_AMOUNT_INVALID');
   }
 
   const amount = Number(totalAmount);
-  if (!Number.isFinite(amount) || amount < 0) {
+  if (amount < 0) {
     throw new Error('TOTAL_AMOUNT_INVALID');
   }
 

@@ -1,5 +1,6 @@
 let documents;
 let currentOpenid;
+let documentGetError;
 
 function resetDocuments() {
   documents = {
@@ -8,21 +9,27 @@ function resetDocuments() {
     asset_changes: []
   };
   currentOpenid = 'allowed-openid';
+  documentGetError = null;
 }
 
 function createCollection(name) {
   const collection = documents[name];
 
   return {
-    where(query) {
+    where(filters) {
+      const getMatchingDocuments = () => Object.values(collection).filter((document) => (
+        Object.entries(filters).every(([key, value]) => document[key] === value)
+      ));
+
       return {
+        async get() {
+          return { data: getMatchingDocuments() };
+        },
         limit() {
           return {
             async get() {
               return {
-                data: Object.values(collection).filter((document) => (
-                  Object.entries(query).every(([key, value]) => document[key] === value)
-                )).slice(0, 1)
+                data: getMatchingDocuments().slice(0, 1)
               };
             }
           };
@@ -39,6 +46,9 @@ function createCollection(name) {
     doc(id) {
       return {
         async get() {
+          if (documentGetError) {
+            throw documentGetError;
+          }
           if (!collection[id]) {
             const error = new Error('document does not exist');
             error.errCode = 'DATABASE_DOCUMENT_NOT_EXIST';
@@ -134,11 +144,55 @@ test('rejects denied access before reading or writing assets', async () => {
   expect(documents.asset_changes).toEqual([]);
 });
 
-test.each([undefined, null, '', '   ', 'abc', Infinity, -1])(
+test('rejects access when more than two enabled users are configured', async () => {
+  documents.users.push(
+    { openid: 'second-openid', enabled: true },
+    { openid: 'third-openid', enabled: true }
+  );
+
+  await expect(main({ action: 'get' })).rejects.toThrow('AUTH_CONFIG_INVALID');
+  expect(documents.family_assets).toEqual({});
+  expect(documents.asset_changes).toEqual([]);
+});
+
+test('propagates non-missing asset database errors', async () => {
+  documentGetError = Object.assign(new Error('database unavailable'), {
+    errCode: 'DATABASE_UNAVAILABLE'
+  });
+
+  await expect(main({ action: 'get' })).rejects.toThrow('database unavailable');
+});
+
+test.each([
+  undefined,
+  null,
+  '',
+  '   ',
+  'abc',
+  true,
+  false,
+  [],
+  [50000],
+  {},
+  NaN,
+  Infinity,
+  -Infinity,
+  -1
+])(
   'rejects invalid total amount %p before writing',
   async (totalAmount) => {
     await expect(main({ action: 'update', totalAmount })).rejects.toThrow('TOTAL_AMOUNT_INVALID');
     expect(documents.family_assets).toEqual({});
     expect(documents.asset_changes).toEqual([]);
+  }
+);
+
+test.each([50000, '50000', '50000.25'])(
+  'accepts numeric total amount %p',
+  async (totalAmount) => {
+    await expect(main({ action: 'update', totalAmount })).resolves.toEqual({
+      ok: true,
+      asset: expect.objectContaining({ totalAmount: Number(totalAmount) })
+    });
   }
 );
