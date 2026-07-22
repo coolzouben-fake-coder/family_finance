@@ -1,0 +1,12 @@
+{
+  "name": "yangmao",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "test": "jest",
+    "test:unit": "jest miniprogram/__tests__ cloudfunctions/__tests__"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0"
+  }
+}
