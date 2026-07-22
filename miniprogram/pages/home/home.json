@@ -1,3 +1,6 @@
 {
-  "navigationBarTitleText": "家庭理财"
+  "navigationBarTitleText": "家庭理财",
+  "usingComponents": {
+    "metric-card": "../../components/metric-card/metric-card"
+  }
 }

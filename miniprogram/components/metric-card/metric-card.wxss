@@ -1,0 +1,25 @@
+.metric {
+  min-height: 148rpx;
+  padding: 24rpx;
+  border-radius: var(--radius-card);
+  background: var(--color-grouped-background);
+  box-sizing: border-box;
+}
+
+.label {
+  color: var(--color-secondary-text);
+  font-size: var(--font-caption);
+}
+
+.value {
+  margin-top: 12rpx;
+  color: var(--color-primary-text);
+  font-size: var(--font-metric);
+  font-weight: 700;
+}
+
+.hint {
+  margin-top: 8rpx;
+  color: var(--color-tertiary-text);
+  font-size: 22rpx;
+}

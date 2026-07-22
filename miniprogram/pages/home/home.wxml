@@ -1,4 +1,15 @@
 <view class="page">
-  <view class="title">家庭理财</view>
-  <view class="subtitle">当前资金状态与项目到期提醒</view>
+  <view class="header">
+    <view>
+      <view class="title">家庭理财</view>
+      <view class="subtitle">当前资金状态与项目到期提醒</view>
+    </view>
+  </view>
+
+  <view class="grid">
+    <metric-card label="家庭总资产" value="{{metrics.totalAssets}}" />
+    <metric-card label="当前理财金额" value="{{metrics.investedAmount}}" />
+    <metric-card label="空闲资金" value="{{metrics.idleAmount}}" />
+    <metric-card label="资金利用率" value="{{metrics.utilizationRate}}" />
+  </view>
 </view>
