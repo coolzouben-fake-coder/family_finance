@@ -6,6 +6,11 @@
     "test": "jest",
     "test:unit": "jest miniprogram/__tests__ cloudfunctions/__tests__"
   },
+  "jest": {
+    "moduleNameMapper": {
+      "^wx-server-sdk$": "<rootDir>/__mocks__/wx-server-sdk.js"
+    }
+  },
   "devDependencies": {
     "jest": "^29.7.0"
   }

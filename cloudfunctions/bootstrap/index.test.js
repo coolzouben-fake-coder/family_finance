@@ -1,5 +1,4 @@
 const assert = require('assert');
-const Module = require('module');
 
 const documents = {
   categories: {
@@ -65,7 +64,7 @@ function createCollection(name) {
   };
 }
 
-const cloud = {
+const mockCloud = {
   DYNAMIC_CURRENT_ENV: 'current',
   init() {},
   getWXContext() {
@@ -84,16 +83,13 @@ const cloud = {
   }
 };
 
-const originalLoad = Module._load;
-Module._load = function load(request, parent, isMain) {
-  if (request === 'wx-server-sdk') return cloud;
-  return originalLoad.call(this, request, parent, isMain);
-};
+jest.mock('wx-server-sdk', () => mockCloud, { virtual: true });
 
 process.env.BOOTSTRAP_OPENIDS = 'openid-a,openid-b';
 const { main } = require('./index');
 
-main().then((result) => {
+test('preserves logical identity for built-in categories', async () => {
+  const result = await main();
   assert.deepStrictEqual(result, {
     ok: true,
     categoriesInserted: 8,
@@ -105,7 +101,4 @@ main().then((result) => {
   assert.strictEqual(documents.settings.default, undefined);
   assert.strictEqual(writes.filter((write) => write.operation === 'set').length, 8);
   assert.strictEqual(writes.some((write) => write.id === 'builtin-fund'), false);
-  console.log('bootstrap logical identity regression: PASS');
-}).finally(() => {
-  Module._load = originalLoad;
 });
