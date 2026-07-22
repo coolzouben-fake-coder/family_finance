@@ -88,3 +88,54 @@ exit_code=0
 
 - The implementation follows the exact brief and does not add validation for malformed dates, negative durations, or missing project arrays. Those behaviors are outside the specified contract and remain untested.
 - Jest installation emitted deprecation warnings for transitive packages, but installation completed and reported 0 vulnerabilities.
+
+## Review finding fix
+
+- Updated `getDateStatus(project, today, dueSoonDays)` to default `dueSoonDays` to `3` when omitted.
+- Added a regression test covering a project ending within the default three-day window.
+
+## Fix verification
+
+### RED
+
+Command:
+
+```text
+npm test -- miniprogram/__tests__/date.test.js
+```
+
+Result before the production fix:
+
+```text
+FAIL miniprogram/__tests__/date.test.js
+Expected: "due_soon"
+Received: "active"
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 4 passed, 5 total
+exit_code=1
+```
+
+### GREEN
+
+Commands and results:
+
+```text
+npm test -- miniprogram/__tests__/date.test.js miniprogram/__tests__/finance.test.js
+Test Suites: 2 passed, 2 total
+Tests:       9 passed, 9 total
+exit_code=0
+
+npm run test:unit
+Test Suites: 2 passed, 2 total
+Tests:       9 passed, 9 total
+exit_code=0
+
+git diff --check
+exit_code=0
+```
+
+## Fix files changed
+
+- `miniprogram/utils/date.js`
+- `miniprogram/__tests__/date.test.js`
+- `.superpowers/sdd/task-2-report.md`

@@ -16,7 +16,7 @@ function daysUntil(endDate, today) {
   return Math.floor((end.getTime() - current.getTime()) / 86400000);
 }
 
-function getDateStatus(project, today, dueSoonDays) {
+function getDateStatus(project, today, dueSoonDays = 3) {
   if (project.manualStatus === 'cancelled') return 'cancelled';
   if (project.manualStatus === 'redeemed') return 'redeemed';
 
