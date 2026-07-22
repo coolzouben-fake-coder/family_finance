@@ -30,6 +30,28 @@ function normalizeReason(reason) {
   return normalized;
 }
 
+function validateChangeType(type) {
+  if (type !== 'deposit' && type !== 'withdraw') {
+    throw new Error('ASSET_CHANGE_TYPE_INVALID');
+  }
+  return type;
+}
+
+function normalizeChangeAmount(amount) {
+  const isNumber = typeof amount === 'number' && Number.isFinite(amount);
+  const isDecimalString = typeof amount === 'string'
+    && /^\d+(?:\.\d+)?$/.test(amount);
+  if (!isNumber && !isDecimalString) {
+    throw new Error('ASSET_AMOUNT_INVALID');
+  }
+
+  const normalized = Number(amount);
+  if (!Number.isFinite(normalized) || normalized <= 0) {
+    throw new Error('ASSET_AMOUNT_INVALID');
+  }
+  return normalized;
+}
+
 async function getAssets(database = db) {
   try {
     const result = await database.collection('family_assets').doc(ASSET_DOCUMENT_ID).get();
@@ -42,33 +64,31 @@ async function getAssets(database = db) {
   }
 }
 
-async function updateAssets(openid, totalAmount, reason) {
-  const isNumber = typeof totalAmount === 'number' && Number.isFinite(totalAmount);
-  const isDecimalString = typeof totalAmount === 'string'
-    && /^\d+(?:\.\d+)?$/.test(totalAmount);
-  if (!isNumber && !isDecimalString) {
-    throw new Error('TOTAL_AMOUNT_INVALID');
-  }
-
-  const amount = Number(totalAmount);
-  if (!Number.isFinite(amount) || amount < 0) {
-    throw new Error('TOTAL_AMOUNT_INVALID');
-  }
+async function updateAssets(openid, type, amountInput, reason) {
+  const changeType = validateChangeType(type);
+  const amount = normalizeChangeAmount(amountInput);
   const normalizedReason = normalizeReason(reason);
 
   return db.runTransaction(async (transaction) => {
     const current = await getAssets(transaction);
+    const beforeAmount = Number(current.totalAmount || 0);
+    const afterAmount = changeType === 'deposit' ? beforeAmount + amount : beforeAmount - amount;
+    if (afterAmount < 0) {
+      throw new Error('ASSET_BALANCE_INSUFFICIENT');
+    }
     const now = db.serverDate();
     const asset = {
-      totalAmount: amount,
+      totalAmount: afterAmount,
       updatedByOpenid: openid,
       updatedAt: now
     };
 
     await transaction.collection('family_assets').doc(ASSET_DOCUMENT_ID).set({ data: asset });
     await transaction.collection('asset_changes').add({ data: {
-      beforeAmount: Number(current.totalAmount || 0),
-      afterAmount: amount,
+      type: changeType,
+      amount,
+      beforeAmount,
+      afterAmount,
       reason: normalizedReason,
       operatorOpenid: openid,
       createdAt: now
@@ -76,6 +96,10 @@ async function updateAssets(openid, totalAmount, reason) {
 
     return { _id: ASSET_DOCUMENT_ID, ...asset };
   });
+}
+
+async function listChanges() {
+  return (await db.collection('asset_changes').orderBy('createdAt', 'desc').get()).data;
 }
 
 exports.main = async (event) => {
@@ -88,8 +112,12 @@ exports.main = async (event) => {
   }
 
   if (event.action === 'update') {
-    const asset = await updateAssets(openid, event.totalAmount, event.reason);
+    const asset = await updateAssets(openid, event.type, event.amount, event.reason);
     return { ok: true, asset };
+  }
+
+  if (event.action === 'listChanges') {
+    return { ok: true, changes: await listChanges() };
   }
 
   throw new Error('UNKNOWN_ACTION');

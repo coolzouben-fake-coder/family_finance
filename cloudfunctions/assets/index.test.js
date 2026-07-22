@@ -47,6 +47,18 @@ function createCollection(name, store = documents) {
         }
       };
     },
+    orderBy(key, direction) {
+      return {
+        async get() {
+          const data = Object.values(collection).slice().sort((left, right) => (
+            direction === 'desc'
+              ? String(right[key]).localeCompare(String(left[key]))
+              : String(left[key]).localeCompare(String(right[key]))
+          ));
+          return { data };
+        }
+      };
+    },
     doc(id) {
       return {
         async get() {
@@ -125,10 +137,11 @@ test('returns the default asset amount when the singleton does not exist', async
   });
 });
 
-test('updates the current family asset and records the change', async () => {
+test('deposits into the current family asset and records the change', async () => {
   await expect(main({
     action: 'update',
-    totalAmount: 50000,
+    type: 'deposit',
+    amount: 50000,
     reason: '初始资产'
   })).resolves.toEqual({
     ok: true,
@@ -144,6 +157,8 @@ test('updates the current family asset and records the change', async () => {
     })
   });
   expect(documents.asset_changes).toEqual([expect.objectContaining({
+    type: 'deposit',
+    amount: 50000,
     beforeAmount: 0,
     afterAmount: 50000,
     reason: '初始资产',
@@ -159,7 +174,8 @@ test('rolls back the asset update when the audit write fails', async () => {
 
   await expect(main({
     action: 'update',
-    totalAmount: 50000,
+    type: 'deposit',
+    amount: 10000,
     reason: '工资到账'
   })).rejects.toThrow('audit write failed');
 
@@ -212,20 +228,20 @@ test.each([
   -Infinity,
   -1
 ])(
-  'rejects invalid total amount %p before writing',
-  async (totalAmount) => {
-    await expect(main({ action: 'update', totalAmount })).rejects.toThrow('TOTAL_AMOUNT_INVALID');
+  'rejects invalid asset change amount %p before writing',
+  async (amount) => {
+    await expect(main({ action: 'update', type: 'deposit', amount, reason: '资产调整' })).rejects.toThrow('ASSET_AMOUNT_INVALID');
     expect(documents.family_assets).toEqual({});
     expect(documents.asset_changes).toEqual([]);
   }
 );
 
 test.each([50000, '50000', '50000.25'])(
-  'accepts numeric total amount %p',
-  async (totalAmount) => {
-    await expect(main({ action: 'update', totalAmount, reason: '资产调整' })).resolves.toEqual({
+  'accepts numeric deposit amount %p',
+  async (amount) => {
+    await expect(main({ action: 'update', type: 'deposit', amount, reason: '资产调整' })).resolves.toEqual({
       ok: true,
-      asset: expect.objectContaining({ totalAmount: Number(totalAmount) })
+      asset: expect.objectContaining({ totalAmount: Number(amount) })
     });
   }
 );
@@ -243,17 +259,65 @@ test.each([
 ])(
   'rejects invalid asset update reason %p before writing',
   async (reason) => {
-    await expect(main({ action: 'update', totalAmount: 50000, reason })).rejects.toThrow('ASSET_REASON_INVALID');
+    await expect(main({ action: 'update', type: 'deposit', amount: 50000, reason })).rejects.toThrow('ASSET_REASON_INVALID');
     expect(documents.family_assets).toEqual({});
     expect(documents.asset_changes).toEqual([]);
   }
 );
 
 test('trims the asset update reason before recording the audit row', async () => {
-  await expect(main({ action: 'update', totalAmount: 50000, reason: '  工资到账  ' })).resolves.toEqual({
+  await expect(main({ action: 'update', type: 'deposit', amount: 50000, reason: '  工资到账  ' })).resolves.toEqual({
     ok: true,
     asset: expect.objectContaining({ totalAmount: 50000 })
   });
 
   expect(documents.asset_changes[0].reason).toBe('工资到账');
+});
+
+test('withdraws from the current family asset and records the change', async () => {
+  documents.family_assets.current = { _id: 'current', totalAmount: 50000 };
+
+  await expect(main({ action: 'update', type: 'withdraw', amount: 12000, reason: '转出备用' })).resolves.toEqual({
+    ok: true,
+    asset: expect.objectContaining({ totalAmount: 38000 })
+  });
+
+  expect(documents.asset_changes).toEqual([expect.objectContaining({
+    type: 'withdraw',
+    amount: 12000,
+    beforeAmount: 50000,
+    afterAmount: 38000,
+    reason: '转出备用'
+  })]);
+});
+
+test('rejects withdraws that would make family assets negative', async () => {
+  documents.family_assets.current = { _id: 'current', totalAmount: 5000 };
+
+  await expect(main({ action: 'update', type: 'withdraw', amount: 6000, reason: '超额支取' }))
+    .rejects.toThrow('ASSET_BALANCE_INSUFFICIENT');
+
+  expect(documents.family_assets.current.totalAmount).toBe(5000);
+  expect(documents.asset_changes).toEqual([]);
+});
+
+test.each([undefined, null, '', 'transfer', 'DEPOSIT'])('rejects invalid asset change type %p before writing', async (type) => {
+  await expect(main({ action: 'update', type, amount: 1000, reason: '资产调整' })).rejects.toThrow('ASSET_CHANGE_TYPE_INVALID');
+  expect(documents.family_assets).toEqual({});
+  expect(documents.asset_changes).toEqual([]);
+});
+
+test('lists all asset changes in newest-first order', async () => {
+  documents.asset_changes = [
+    { _id: 'old', type: 'deposit', amount: 1000, beforeAmount: 0, afterAmount: 1000, reason: '旧记录', createdAt: '2026-07-21T00:00:00Z' },
+    { _id: 'new', type: 'withdraw', amount: 300, beforeAmount: 1000, afterAmount: 700, reason: '新记录', createdAt: '2026-07-22T00:00:00Z' }
+  ];
+
+  await expect(main({ action: 'listChanges' })).resolves.toEqual({
+    ok: true,
+    changes: [
+      expect.objectContaining({ _id: 'new' }),
+      expect.objectContaining({ _id: 'old' })
+    ]
+  });
 });

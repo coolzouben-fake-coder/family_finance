@@ -18,9 +18,11 @@ function getAssets() {
   return callCloud('assets', { action: 'get' });
 }
 
-function updateAssets(totalAmount, reason) {
-  return callCloud('assets', { action: 'update', totalAmount, reason });
+function updateAssets(type, amount, reason) {
+  return callCloud('assets', { action: 'update', type, amount, reason });
 }
+
+function listAssetChanges() { return callCloud('assets', { action: 'listChanges' }); }
 
 function listProjects(filters = {}) { return callCloud('projects', { action: 'list', ...filters }); }
 function listCategories() { return callCloud('projects', { action: 'listCategories' }); }
@@ -34,6 +36,6 @@ function removeProject(id) { return callCloud('projects', { action: 'remove', id
 function getAnnualStats(year) { return callCloud('stats', { action: 'annual', year }); }
 
 module.exports = {
-  callCloud, getAssets, updateAssets, listProjects, listCategories, listUsers, createProject, updateProject,
+  callCloud, getAssets, updateAssets, listAssetChanges, listProjects, listCategories, listUsers, createProject, updateProject,
   redeemProject, correctRedemption, cancelProject, removeProject, getAnnualStats
 };
