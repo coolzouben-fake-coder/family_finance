@@ -1,0 +1,12 @@
+{
+  "$schema": "https://static.cloudbase.net/cli/cloudbaserc.schema.json",
+  "envId": "cloudbase-d7gx0ikiwa58549a4",
+  "functionRoot": "cloudfunctions",
+  "functions": [
+    {
+      "name": "assets",
+      "runtime": "Nodejs16.13",
+      "handler": "index.main"
+    }
+  ]
+}
