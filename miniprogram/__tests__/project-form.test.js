@@ -210,6 +210,20 @@ describe('project form', () => {
     expect(markup).toContain('disabled="{{saving || redeeming}}"');
   });
 
+  test('uses stable row-based form layout to prevent input overlap', () => {
+    const fs = require('fs');
+    const path = require('path');
+    const markup = fs.readFileSync(path.join(__dirname, '../pages/project-form/project-form.wxml'), 'utf8');
+    const styles = fs.readFileSync(path.join(__dirname, '../pages/project-form/project-form.wxss'), 'utf8');
+
+    expect(markup).toContain('class="form-group surface"');
+    expect(markup).toContain('class="form-row"');
+    expect(markup).toContain('class="form-label"');
+    expect(styles).toContain('min-height: 104rpx');
+    expect(styles).toContain('line-height: 76rpx');
+    expect(styles).toContain('text-align: right');
+  });
+
   test('submits corrections for redeemed projects through the dedicated action', async () => {
     mockListProjects.mockResolvedValue({ projects: [{
       _id: 'redeemed-id',

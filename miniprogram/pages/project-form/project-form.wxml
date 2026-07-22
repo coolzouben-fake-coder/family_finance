@@ -2,29 +2,75 @@
   <view wx:if="{{loading}}" class="form-state surface caption">正在加载项目</view>
   <view wx:elif="{{errorMessage}}" class="form-state error-state surface">{{errorMessage}}</view>
   <block wx:else>
-  <input class="field" placeholder="项目名称" value="{{form.name}}" data-field="name" bindinput="onInput" disabled="{{isLocked || saving || redeeming}}" />
-  <view wx:if="{{categories.length > 0}}">
-    <picker mode="selector" range="{{categories}}" range-key="name" bindchange="onCategoryChange" disabled="{{isLocked || saving || redeeming}}">
-      <view class="field picker-field">{{selectedCategoryName || '选择品类'}}</view>
-    </picker>
+  <view class="form-group surface">
+    <view class="form-row">
+      <text class="form-label">项目名称</text>
+      <input class="field" placeholder="例如 28 天理财" value="{{form.name}}" data-field="name" bindinput="onInput" disabled="{{isLocked || saving || redeeming}}" />
+    </view>
+    <view class="form-row">
+      <text class="form-label">品类</text>
+      <view wx:if="{{categories.length > 0}}" class="field-wrap">
+        <picker mode="selector" range="{{categories}}" range-key="name" bindchange="onCategoryChange" disabled="{{isLocked || saving || redeeming}}">
+          <view class="field picker-field">{{selectedCategoryName || '选择品类'}}</view>
+        </picker>
+      </view>
+      <view wx:else class="empty-field">请先部署并运行 bootstrap 云函数初始化品类</view>
+    </view>
+    <view class="form-row">
+      <text class="form-label">登记人</text>
+      <view class="field-wrap">
+        <picker mode="selector" range="{{users}}" range-key="displayName" bindchange="onRegistrantChange" disabled="{{isLocked || saving || redeeming}}">
+          <view class="field picker-field">{{selectedRegistrantName || '选择家庭成员'}}</view>
+        </picker>
+      </view>
+    </view>
   </view>
-  <view wx:else class="empty-field">请先部署并运行 bootstrap 云函数初始化品类</view>
-  <picker mode="selector" range="{{users}}" range-key="displayName" bindchange="onRegistrantChange" disabled="{{isLocked || saving || redeeming}}">
-    <view class="field picker-field">登记人：{{selectedRegistrantName || '选择家庭成员'}}</view>
-  </picker>
-  <input class="field" type="digit" placeholder="本金" value="{{form.principal}}" data-field="principal" bindinput="onInput" disabled="{{isLocked || saving || redeeming}}" />
-  <input class="field" placeholder="开始日期 YYYY-MM-DD" value="{{form.startDate}}" data-field="startDate" bindinput="onInput" disabled="{{isLocked || saving || redeeming}}" />
-  <input class="field" placeholder="结束日期 YYYY-MM-DD" value="{{form.endDate}}" data-field="endDate" bindinput="onInput" disabled="{{isLocked || saving || redeeming}}" />
-  <input class="field" type="digit" placeholder="预期年化，如 0.03" value="{{form.expectedAnnualRate}}" data-field="expectedAnnualRate" bindinput="onInput" disabled="{{isLocked || saving || redeeming}}" />
-  <input class="field" type="digit" placeholder="固定奖励" value="{{form.fixedReward}}" data-field="fixedReward" bindinput="onInput" disabled="{{isLocked || saving || redeeming}}" />
-  <textarea class="textarea" placeholder="备注" value="{{form.remark}}" data-field="remark" bindinput="onInput" disabled="{{isLocked || saving || redeeming}}" />
+
+  <view class="form-group surface">
+    <view class="form-row">
+      <text class="form-label">本金</text>
+      <input class="field" type="digit" placeholder="0.00" value="{{form.principal}}" data-field="principal" bindinput="onInput" disabled="{{isLocked || saving || redeeming}}" />
+    </view>
+    <view class="form-row">
+      <text class="form-label">开始日期</text>
+      <input class="field" placeholder="YYYY-MM-DD" value="{{form.startDate}}" data-field="startDate" bindinput="onInput" disabled="{{isLocked || saving || redeeming}}" />
+    </view>
+    <view class="form-row">
+      <text class="form-label">结束日期</text>
+      <input class="field" placeholder="YYYY-MM-DD" value="{{form.endDate}}" data-field="endDate" bindinput="onInput" disabled="{{isLocked || saving || redeeming}}" />
+    </view>
+    <view class="form-row">
+      <text class="form-label">预期年化</text>
+      <input class="field" type="digit" placeholder="例如 0.03" value="{{form.expectedAnnualRate}}" data-field="expectedAnnualRate" bindinput="onInput" disabled="{{isLocked || saving || redeeming}}" />
+    </view>
+    <view class="form-row">
+      <text class="form-label">固定奖励</text>
+      <input class="field" type="digit" placeholder="0.00" value="{{form.fixedReward}}" data-field="fixedReward" bindinput="onInput" disabled="{{isLocked || saving || redeeming}}" />
+    </view>
+  </view>
+
+  <view class="form-group surface">
+    <view class="form-row form-row--stacked">
+      <text class="form-label">备注</text>
+      <textarea class="textarea" placeholder="补充说明" value="{{form.remark}}" data-field="remark" bindinput="onInput" disabled="{{isLocked || saving || redeeming}}" />
+    </view>
+  </view>
   <button wx:if="{{!isLocked}}" class="primary-button" loading="{{saving}}" disabled="{{saving || redeeming}}" bindtap="save">保存</button>
   <view wx:if="{{projectId && !isCancelled}}" class="redeem surface">
     <view class="section-title">{{isRedeemed ? '更正到账记录' : '确认到账'}}</view>
     <view wx:if="{{isRedeemed}}" class="history-warning">更正后会重新计算对应年度的历史统计。</view>
-    <input class="field" placeholder="到账日期 YYYY-MM-DD" value="{{redeemForm.redeemDate}}" data-field="redeemDate" bindinput="onRedeemInput" disabled="{{saving || redeeming}}" />
-    <input class="field" type="text" placeholder="实际利息" value="{{redeemForm.actualInterest}}" data-field="actualInterest" bindinput="onRedeemInput" disabled="{{saving || redeeming}}" />
-    <input class="field" type="text" placeholder="实际固定奖励" value="{{redeemForm.actualFixedReward}}" data-field="actualFixedReward" bindinput="onRedeemInput" disabled="{{saving || redeeming}}" />
+    <view class="form-row">
+      <text class="form-label">到账日期</text>
+      <input class="field" placeholder="YYYY-MM-DD" value="{{redeemForm.redeemDate}}" data-field="redeemDate" bindinput="onRedeemInput" disabled="{{saving || redeeming}}" />
+    </view>
+    <view class="form-row">
+      <text class="form-label">实际利息</text>
+      <input class="field" type="text" placeholder="0.00" value="{{redeemForm.actualInterest}}" data-field="actualInterest" bindinput="onRedeemInput" disabled="{{saving || redeeming}}" />
+    </view>
+    <view class="form-row">
+      <text class="form-label">固定奖励</text>
+      <input class="field" type="text" placeholder="0.00" value="{{redeemForm.actualFixedReward}}" data-field="actualFixedReward" bindinput="onRedeemInput" disabled="{{saving || redeeming}}" />
+    </view>
     <button class="secondary-button" loading="{{redeeming}}" disabled="{{saving || redeeming}}" bindtap="redeem">{{isRedeemed ? '保存更正' : '确认到账'}}</button>
   </view>
   <view wx:if="{{isLocked}}" class="redeemed-note surface caption">{{lockedMessage}}</view>
