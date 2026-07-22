@@ -76,3 +76,26 @@
 
 - `cloudfunctions/bootstrap/index.js`
 - `.superpowers/sdd/task-1-report.md`
+
+## Third Review Fix: Logical Identity And Atomic Initialization
+
+### What I Fixed
+
+- Kept strict bootstrap authorization unchanged: `BOOTSTRAP_OPENIDS` is required, contains exactly two distinct OpenIDs, and only those callers are allowed; there is no `users` fallback.
+- Moved category and settings initialization into `db.runTransaction(...)` so concurrent authorized invocations cannot independently report the same deterministic category creation.
+- Categories are now looked up first by logical identity `{ name, type: 'builtin' }`. A matching legacy-ID category is updated in place with mutable built-in fields, preserves `createdAt`, does not create a deterministic-ID duplicate, and does not increment `categoriesInserted`.
+- Deterministic category IDs are used only when no logical match exists, after which `categoriesInserted` is incremented.
+- Settings now checks for any existing settings document inside the transaction. An existing singleton document with a non-`default` ID remains unchanged; `settings/default` is created only when the collection is empty.
+
+### Verification
+
+- `node cloudfunctions/bootstrap/index.test.js`: exit 0; verified a legacy-ID built-in category is updated without a duplicate or insert count, and legacy settings are preserved without creating `default`.
+- `node --check cloudfunctions/bootstrap/index.js`: exit 0.
+- Static bootstrap contract check: exit 0; verified the exact two-OpenID authorization, no `users` fallback, logical category query, transactional creation-only insert count, deterministic ID placement, and settings singleton check.
+- `git diff --check`: exit 0.
+
+### Files Changed
+
+- `cloudfunctions/bootstrap/index.js`
+- `cloudfunctions/bootstrap/index.test.js`
+- `.superpowers/sdd/task-1-report.md`

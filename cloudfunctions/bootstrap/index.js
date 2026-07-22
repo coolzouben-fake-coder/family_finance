@@ -42,46 +42,52 @@ exports.main = async () => {
   const { OPENID: openid } = cloud.getWXContext();
   await requireBootstrapAllowed(openid);
 
-  const categories = db.collection('categories');
-  let categoriesInserted = 0;
+  const categoriesInserted = await db.runTransaction(async (transaction) => {
+    const categories = transaction.collection('categories');
+    let categoriesInserted = 0;
 
-  for (let index = 0; index < BUILTIN_CATEGORIES.length; index += 1) {
-    const category = BUILTIN_CATEGORIES[index];
-    const categoryDocument = categories.doc(category.id);
-    const existing = await categoryDocument.get();
-    const mutableFields = {
-      name: category.name,
-      type: 'builtin',
-      enabled: true,
-      sortOrder: index + 1,
-      updatedAt: db.serverDate()
-    };
+    for (let index = 0; index < BUILTIN_CATEGORIES.length; index += 1) {
+      const category = BUILTIN_CATEGORIES[index];
+      const existing = await categories.where({
+        name: category.name,
+        type: 'builtin'
+      }).limit(1).get();
+      const mutableFields = {
+        name: category.name,
+        type: 'builtin',
+        enabled: true,
+        sortOrder: index + 1,
+        updatedAt: db.serverDate()
+      };
 
-    if (existing.data.length > 0) {
-      await categoryDocument.update({ data: mutableFields });
-    } else {
-      await categoryDocument.set({
+      if (existing.data.length > 0) {
+        await categories.doc(existing.data[0]._id).update({ data: mutableFields });
+      } else {
+        await categories.doc(category.id).set({
+          data: {
+            ...mutableFields,
+            createdAt: db.serverDate()
+          }
+        });
+        categoriesInserted += 1;
+      }
+    }
+
+    const settings = transaction.collection('settings');
+    const existingSettings = await settings.limit(1).get();
+    if (existingSettings.data.length === 0) {
+      await settings.doc('default').set({
         data: {
-          ...mutableFields,
-          createdAt: db.serverDate()
+          dueSoonDays: 3,
+          defaultYear: new Date().getFullYear(),
+          subscriptionReminderEnabled: false,
+          updatedAt: db.serverDate()
         }
       });
-      categoriesInserted += 1;
     }
-  }
 
-  const settingsDocument = db.collection('settings').doc('default');
-  const existingSettings = await settingsDocument.get();
-  if (existingSettings.data.length === 0) {
-    await settingsDocument.set({
-      data: {
-        dueSoonDays: 3,
-        defaultYear: new Date().getFullYear(),
-        subscriptionReminderEnabled: false,
-        updatedAt: db.serverDate()
-      }
-    });
-  }
+    return categoriesInserted;
+  });
 
   return {
     ok: true,
