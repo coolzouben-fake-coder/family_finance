@@ -4,6 +4,7 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 
 const db = cloud.database();
 const MAX_ENABLED_USERS = 2;
+const PROJECT_QUERY_BATCH_SIZE = 20;
 
 function isValidDate(value) {
   if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
@@ -20,6 +21,10 @@ function numberInRange(value, errorCode, min, max) {
 
 function optionalMoney(value, errorCode) {
   return numberInRange(value === undefined || value === '' ? 0 : value, errorCode, 0, 1000000000000);
+}
+
+function optionalActualReturn(value, errorCode) {
+  return numberInRange(value === undefined || value === '' ? 0 : value, errorCode, -1000000000000, 1000000000000);
 }
 
 function calculateExpectedInterest(principal, annualRate, startDate, endDate) {
@@ -68,7 +73,17 @@ async function listProjects(event) {
   const query = {};
   if (['active', 'redeemed', 'cancelled'].includes(event.manualStatus)) query.manualStatus = event.manualStatus;
   if (typeof event.categoryId === 'string' && event.categoryId) query.categoryId = event.categoryId;
-  return (await db.collection('projects').where(query).orderBy('endDate', 'asc').get()).data;
+  if (typeof event.registrantOpenid === 'string' && event.registrantOpenid) query.registrantOpenid = event.registrantOpenid;
+
+  const projects = [];
+  let offset = 0;
+  while (true) {
+    const result = await db.collection('projects').where(query).orderBy('endDate', 'asc')
+      .skip(offset).limit(PROJECT_QUERY_BATCH_SIZE).get();
+    projects.push(...result.data);
+    if (result.data.length < PROJECT_QUERY_BATCH_SIZE) return projects;
+    offset += result.data.length;
+  }
 }
 
 async function listCategories() {
@@ -108,8 +123,8 @@ async function redeemProject(id, data) {
   if (!data || !isValidDate(data.redeemDate)) throw new Error('REDEEM_DATE_REQUIRED');
   if (data.redeemDate < project.startDate) throw new Error('REDEEM_DATE_INVALID');
   const payload = {
-    actualInterest: optionalMoney(data.actualInterest, 'ACTUAL_INTEREST_INVALID'),
-    actualFixedReward: optionalMoney(data.actualFixedReward, 'ACTUAL_FIXED_REWARD_INVALID'),
+    actualInterest: optionalActualReturn(data.actualInterest, 'ACTUAL_INTEREST_INVALID'),
+    actualFixedReward: optionalActualReturn(data.actualFixedReward, 'ACTUAL_FIXED_REWARD_INVALID'),
     redeemDate: data.redeemDate, manualStatus: 'redeemed', updatedAt: db.serverDate()
   };
   await db.collection('projects').doc(id).update({ data: payload });

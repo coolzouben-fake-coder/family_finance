@@ -19,23 +19,35 @@ function createCollection(name) {
 
   return {
     where(filters) {
+      let sortKey;
+      let sortDirection;
+      let offset = 0;
+      let max = 20;
       const query = {
-        _documents: () => collection.filter((document) => matches(document, filters)),
         orderBy(key, direction) {
-          return {
-            get: async () => ({
-              data: query._documents().slice().sort((left, right) => (
-                direction === 'desc'
-                  ? String(right[key]).localeCompare(String(left[key]))
-                  : String(left[key]).localeCompare(String(right[key]))
-              ))
-            })
-          };
+          sortKey = key;
+          sortDirection = direction;
+          return query;
         },
-        limit(limit) {
-          return { get: async () => ({ data: query._documents().slice(0, limit) }) };
+        skip(value) {
+          offset = value;
+          return query;
         },
-        get: async () => ({ data: query._documents() })
+        limit(value) {
+          max = value;
+          return query;
+        },
+        async get() {
+          const data = collection.filter((document) => matches(document, filters)).slice();
+          if (sortKey) {
+            data.sort((left, right) => (
+              sortDirection === 'desc'
+                ? String(right[sortKey]).localeCompare(String(left[sortKey]))
+                : String(left[sortKey]).localeCompare(String(right[sortKey]))
+            ));
+          }
+          return { data: data.slice(offset, offset + max) };
+        }
       };
       return query;
     },
@@ -156,16 +168,57 @@ test('redeems using the stored start date and rejects dates before it', async ()
   }) });
 });
 
+test('allows negative actual return components when redeeming a realized loss', async () => {
+  const created = await main({ action: 'create', project });
+
+  await expect(main({ action: 'redeem', id: created.project._id, redeemData: {
+    redeemDate: '2026-07-28',
+    actualInterest: -20,
+    actualFixedReward: -100
+  } })).resolves.toEqual({ ok: true, project: expect.objectContaining({
+    actualInterest: -20,
+    actualFixedReward: -100,
+    manualStatus: 'redeemed'
+  }) });
+
+  expect(documents.projects[0]).toEqual(expect.objectContaining({
+    actualInterest: -20,
+    actualFixedReward: -100
+  }));
+});
+
 test('lists enabled categories and applies server-safe project filters', async () => {
   documents.categories.push({ _id: 'category-2', name: '停用品类', enabled: false, sortOrder: 2 });
   await main({ action: 'create', project });
+  documents.projects.push({ _id: 'projects-other', ...project, registrantOpenid: 'other-openid', manualStatus: 'active' });
 
   await expect(main({ action: 'listCategories' })).resolves.toEqual({
     ok: true,
     categories: [expect.objectContaining({ _id: 'category-1' })]
   });
-  await expect(main({ action: 'list', categoryId: 'category-1', registrantOpenid: 'spoofed' }))
+  await expect(main({ action: 'list', categoryId: 'category-1', registrantOpenid: 'allowed-openid' }))
     .resolves.toEqual({ ok: true, projects: [expect.objectContaining({ _id: 'projects-1' })] });
+});
+
+test('lists every matching project across database pages in end-date order', async () => {
+  documents.projects = Array.from({ length: 25 }, (_, index) => ({
+    _id: `project-${index + 1}`,
+    registrantOpenid: 'allowed-openid',
+    manualStatus: 'active',
+    categoryId: 'category-1',
+    endDate: `2026-08-${String(25 - index).padStart(2, '0')}`
+  }));
+
+  await expect(main({ action: 'list', registrantOpenid: 'allowed-openid' })).resolves.toEqual({
+    ok: true,
+    projects: expect.arrayContaining([expect.objectContaining({ _id: 'project-25' })])
+  });
+
+  const result = await main({ action: 'list', registrantOpenid: 'allowed-openid' });
+  expect(result.projects).toHaveLength(25);
+  expect(result.projects.map((item) => item.endDate)).toEqual([
+    ...result.projects.map((item) => item.endDate).slice().sort()
+  ]);
 });
 
 test('cancels active projects and removes an existing project', async () => {
