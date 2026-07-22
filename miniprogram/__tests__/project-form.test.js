@@ -1,10 +1,11 @@
 const mockEnsureAllowedSession = jest.fn();
 const mockCreateProject = jest.fn();
+const mockUpdateProject = jest.fn();
 
 jest.mock('../services/session', () => ({ ensureAllowedSession: mockEnsureAllowedSession }));
 jest.mock('../services/cloud', () => ({
   createProject: mockCreateProject,
-  updateProject: jest.fn(),
+  updateProject: mockUpdateProject,
   redeemProject: jest.fn(),
   listCategories: jest.fn(),
   listProjects: jest.fn()
@@ -37,8 +38,10 @@ function createProjectFormPage(form) {
 describe('project form', () => {
   beforeEach(() => {
     jest.resetModules();
+    jest.clearAllMocks();
     mockEnsureAllowedSession.mockResolvedValue();
     mockCreateProject.mockResolvedValue();
+    mockUpdateProject.mockResolvedValue();
     global.wx = { showToast: jest.fn(), navigateBack: jest.fn() };
     global.Page = (definition) => { pageDefinition = definition; };
     require('../pages/project-form/project-form');
@@ -59,6 +62,19 @@ describe('project form', () => {
 
     expect(global.wx.showToast).toHaveBeenCalledWith({ title: message, icon: 'none' });
     expect(mockCreateProject).not.toHaveBeenCalled();
+  });
+
+  test.each(['', 'project-id'])('rejects malformed dates without calling cloud requests', (projectId) => {
+    const page = createProjectFormPage({
+      name: '项目', categoryId: 'category', principal: '10000', startDate: 'abc', endDate: 'def'
+    });
+    page.data.projectId = projectId;
+
+    page.save();
+
+    expect(global.wx.showToast).toHaveBeenCalledWith({ title: '日期格式不正确', icon: 'none' });
+    expect(mockCreateProject).not.toHaveBeenCalled();
+    expect(mockUpdateProject).not.toHaveBeenCalled();
   });
 
   test('renders the bootstrap guidance when no categories are available', () => {

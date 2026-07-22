@@ -9,11 +9,22 @@ function emptyForm() {
 
 function showError(error) { wx.showToast({ title: error.message || '保存失败', icon: 'none' }); }
 
+function isValidDateInput(dateText) {
+  if (typeof dateText !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(dateText)) return false;
+
+  const [year, month, day] = dateText.split('-').map(Number);
+  const date = new Date(0);
+  date.setUTCHours(0, 0, 0, 0);
+  date.setUTCFullYear(year, month - 1, day);
+  return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day;
+}
+
 function validateForm(form) {
   if (!form.name) return '请填写项目名称';
   if (!form.categoryId) return '请选择品类';
   if (!(Number(form.principal) > 0)) return '本金必须大于 0';
   if (!form.startDate || !form.endDate) return '请填写开始日期和结束日期';
+  if (!isValidDateInput(form.startDate) || !isValidDateInput(form.endDate)) return '日期格式不正确';
   if (form.endDate < form.startDate) return '结束日期不能早于开始日期';
   return '';
 }
