@@ -19,9 +19,9 @@ function isMissingDocumentError(error) {
   return error && error.errCode === 'DATABASE_DOCUMENT_NOT_EXIST';
 }
 
-async function getAssets() {
+async function getAssets(database = db) {
   try {
-    const result = await db.collection('family_assets').doc(ASSET_DOCUMENT_ID).get();
+    const result = await database.collection('family_assets').doc(ASSET_DOCUMENT_ID).get();
     return result.data;
   } catch (error) {
     if (isMissingDocumentError(error)) {
@@ -44,28 +44,26 @@ async function updateAssets(openid, totalAmount, reason) {
     throw new Error('TOTAL_AMOUNT_INVALID');
   }
 
-  const current = await getAssets();
-  const now = db.serverDate();
-
-  await db.collection('family_assets').doc(ASSET_DOCUMENT_ID).set({
-    data: {
+  return db.runTransaction(async (transaction) => {
+    const current = await getAssets(transaction);
+    const now = db.serverDate();
+    const asset = {
       totalAmount: amount,
       updatedByOpenid: openid,
       updatedAt: now
-    }
-  });
+    };
 
-  await db.collection('asset_changes').add({
-    data: {
+    await transaction.collection('family_assets').doc(ASSET_DOCUMENT_ID).set({ data: asset });
+    await transaction.collection('asset_changes').add({ data: {
       beforeAmount: Number(current.totalAmount || 0),
       afterAmount: amount,
-      reason: reason || '调整家庭总资产',
+      reason: typeof reason === 'string' && reason.trim() ? reason.trim() : '调整家庭总资产',
       operatorOpenid: openid,
       createdAt: now
-    }
-  });
+    } });
 
-  return getAssets();
+    return { _id: ASSET_DOCUMENT_ID, ...asset };
+  });
 }
 
 exports.main = async (event) => {

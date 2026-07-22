@@ -1,5 +1,5 @@
 const { ensureAllowedSession } = require('../../services/session');
-const { getAssets, listProjects } = require('../../services/cloud');
+const { getAssets, listProjects, updateAssets } = require('../../services/cloud');
 const { summarizeCapital } = require('../../utils/finance');
 const { getDateStatus } = require('../../utils/date');
 
@@ -22,6 +22,12 @@ function percent(value) {
 Page({
   data: {
     loading: true,
+    errorMessage: '',
+    totalAssetsValue: 0,
+    editingAssets: false,
+    savingAssets: false,
+    assetAmountInput: '',
+    assetReasonInput: '',
     metrics: {
       totalAssets: '¥0.00',
       investedAmount: '¥0.00',
@@ -43,6 +49,7 @@ Page({
   },
 
   loadDashboard() {
+    this.setData({ loading: true, errorMessage: '' });
     ensureAllowedSession()
       .then(() => Promise.all([getAssets(), listProjects()]))
       .then(([assetResult, projectResult]) => {
@@ -57,6 +64,7 @@ Page({
 
         this.setData({
           loading: false,
+          totalAssetsValue: summary.totalAssets,
           metrics: {
             totalAssets: money(summary.totalAssets),
             investedAmount: money(summary.investedAmount),
@@ -68,7 +76,51 @@ Page({
         });
       })
       .catch(() => {
-        this.setData({ loading: false });
+        this.setData({ loading: false, errorMessage: '资金看板加载失败，请稍后重试' });
+      });
+  },
+
+  startAssetEdit() {
+    this.setData({
+      editingAssets: true,
+      assetAmountInput: String(this.data.totalAssetsValue),
+      assetReasonInput: ''
+    });
+  },
+
+  cancelAssetEdit() {
+    this.setData({ editingAssets: false, assetReasonInput: '' });
+  },
+
+  onAssetInput(event) {
+    this.setData({ assetAmountInput: event.detail.value });
+  },
+
+  onAssetReasonInput(event) {
+    this.setData({ assetReasonInput: event.detail.value });
+  },
+
+  saveAssets() {
+    const amount = Number(this.data.assetAmountInput);
+    const reason = this.data.assetReasonInput.trim();
+    if (!Number.isFinite(amount) || amount < 0) {
+      wx.showToast({ title: '家庭总资产不能小于 0', icon: 'none' });
+      return;
+    }
+    if (!reason) {
+      wx.showToast({ title: '请填写调整原因', icon: 'none' });
+      return;
+    }
+
+    this.setData({ savingAssets: true });
+    return updateAssets(amount, reason)
+      .then(() => {
+        this.setData({ editingAssets: false, savingAssets: false });
+        return this.loadDashboard();
+      })
+      .catch(() => {
+        this.setData({ savingAssets: false });
+        wx.showToast({ title: '家庭总资产更新失败', icon: 'none' });
       });
   }
 });

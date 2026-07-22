@@ -24,7 +24,7 @@ function getDateStatus(project, today, dueSoonDays = 3) {
   if (today > project.endDate) return 'overdue_pending';
 
   const remainingDays = daysUntil(project.endDate, today);
-  if (remainingDays >= 0 && remainingDays < dueSoonDays) return 'due_soon';
+  if (remainingDays >= 0 && remainingDays <= dueSoonDays) return 'due_soon';
 
   return 'active';
 }

@@ -36,6 +36,20 @@ async function requireAllowed(openid) {
   const result = await db.collection('users').where({ enabled: true }).get();
   if (result.data.length > MAX_ENABLED_USERS) throw new Error('AUTH_CONFIG_INVALID');
   if (!result.data.some((user) => user.openid === openid)) throw new Error('AUTH_DENIED');
+  return result.data;
+}
+
+function requireTwoEnabledUsers(users) {
+  const openids = users.map((user) => user.openid);
+  if (users.length !== MAX_ENABLED_USERS || openids.some((openid) => typeof openid !== 'string' || !openid)
+    || new Set(openids).size !== MAX_ENABLED_USERS) throw new Error('AUTH_CONFIG_INVALID');
+}
+
+function selectRegistrant(requestedOpenid, fallbackOpenid, enabledUsers) {
+  requireTwoEnabledUsers(enabledUsers);
+  const registrantOpenid = requestedOpenid || fallbackOpenid;
+  if (!enabledUsers.some((user) => user.openid === registrantOpenid)) throw new Error('REGISTRANT_INVALID');
+  return registrantOpenid;
 }
 
 async function requireEnabledCategory(categoryId) {
@@ -90,12 +104,21 @@ async function listCategories() {
   return (await db.collection('categories').where({ enabled: true }).orderBy('sortOrder', 'asc').get()).data;
 }
 
-async function createProject(openid, data) {
+function listUsers(enabledUsers) {
+  requireTwoEnabledUsers(enabledUsers);
+  return enabledUsers.map((user) => ({
+    openid: user.openid,
+    nickname: typeof user.nickname === 'string' ? user.nickname : '',
+    role: typeof user.role === 'string' ? user.role : ''
+  }));
+}
+
+async function createProject(openid, data, enabledUsers) {
   const project = validateBaseProject(data);
   await requireEnabledCategory(project.categoryId);
   const now = db.serverDate();
   const payload = {
-    ...project, registrantOpenid: openid,
+    ...project, registrantOpenid: selectRegistrant(data.registrantOpenid, openid, enabledUsers),
     expectedInterest: calculateExpectedInterest(project.principal, project.expectedAnnualRate, project.startDate, project.endDate),
     actualInterest: 0, actualFixedReward: 0, redeemDate: '', manualStatus: 'active', createdAt: now, updatedAt: now
   };
@@ -103,13 +126,14 @@ async function createProject(openid, data) {
   return { _id: result._id, ...payload };
 }
 
-async function updateProject(id, data) {
+async function updateProject(id, data, enabledUsers) {
   const existing = await getProject(id);
   if (existing.manualStatus !== 'active') throw new Error('PROJECT_NOT_ACTIVE');
   const project = validateBaseProject(data);
   await requireEnabledCategory(project.categoryId);
   const payload = {
     ...project,
+    registrantOpenid: selectRegistrant(data.registrantOpenid, existing.registrantOpenid, enabledUsers),
     expectedInterest: calculateExpectedInterest(project.principal, project.expectedAnnualRate, project.startDate, project.endDate),
     updatedAt: db.serverDate()
   };
@@ -117,16 +141,28 @@ async function updateProject(id, data) {
   return { _id: id, ...existing, ...payload };
 }
 
-async function redeemProject(id, data) {
-  const project = await getProject(id);
-  if (project.manualStatus !== 'active') throw new Error('PROJECT_NOT_ACTIVE');
+function validateRedemption(project, data) {
   if (!data || !isValidDate(data.redeemDate)) throw new Error('REDEEM_DATE_REQUIRED');
   if (data.redeemDate < project.startDate) throw new Error('REDEEM_DATE_INVALID');
-  const payload = {
+  return {
     actualInterest: optionalActualReturn(data.actualInterest, 'ACTUAL_INTEREST_INVALID'),
     actualFixedReward: optionalActualReturn(data.actualFixedReward, 'ACTUAL_FIXED_REWARD_INVALID'),
     redeemDate: data.redeemDate, manualStatus: 'redeemed', updatedAt: db.serverDate()
   };
+}
+
+async function redeemProject(id, data) {
+  const project = await getProject(id);
+  if (project.manualStatus !== 'active') throw new Error('PROJECT_NOT_ACTIVE');
+  const payload = validateRedemption(project, data);
+  await db.collection('projects').doc(id).update({ data: payload });
+  return { _id: id, ...project, ...payload };
+}
+
+async function correctRedemption(id, data) {
+  const project = await getProject(id);
+  if (project.manualStatus !== 'redeemed') throw new Error('PROJECT_NOT_REDEEMED');
+  const payload = validateRedemption(project, data);
   await db.collection('projects').doc(id).update({ data: payload });
   return { _id: id, ...project, ...payload };
 }
@@ -144,12 +180,14 @@ async function removeProject(id) {
 
 exports.main = async (event = {}) => {
   const openid = cloud.getWXContext().OPENID;
-  await requireAllowed(openid);
+  const enabledUsers = await requireAllowed(openid);
   if (event.action === 'list') return { ok: true, projects: await listProjects(event) };
   if (event.action === 'listCategories') return { ok: true, categories: await listCategories() };
-  if (event.action === 'create') return { ok: true, project: await createProject(openid, event.project) };
-  if (event.action === 'update') return { ok: true, project: await updateProject(event.id, event.project) };
+  if (event.action === 'listUsers') return { ok: true, users: listUsers(enabledUsers) };
+  if (event.action === 'create') return { ok: true, project: await createProject(openid, event.project, enabledUsers) };
+  if (event.action === 'update') return { ok: true, project: await updateProject(event.id, event.project, enabledUsers) };
   if (event.action === 'redeem') return { ok: true, project: await redeemProject(event.id, event.redeemData) };
+  if (event.action === 'correctRedemption') return { ok: true, project: await correctRedemption(event.id, event.redeemData) };
   if (event.action === 'cancel') { await cancelProject(event.id); return { ok: true }; }
   if (event.action === 'remove') { await removeProject(event.id); return { ok: true }; }
   throw new Error('UNKNOWN_ACTION');

@@ -20,6 +20,11 @@ describe('date utilities', () => {
     expect(getDateStatus(project, '2026-07-26')).toBe('due_soon');
   });
 
+  test('includes the exact due-soon day boundary', () => {
+    const project = { manualStatus: 'active', startDate: '2026-07-01', endDate: '2026-07-28' };
+    expect(getDateStatus(project, '2026-07-25', 3)).toBe('due_soon');
+  });
+
   test('returns overdue pending after end date', () => {
     const project = { manualStatus: 'active', startDate: '2026-07-01', endDate: '2026-07-28' };
     expect(getDateStatus(project, '2026-07-29', 3)).toBe('overdue_pending');

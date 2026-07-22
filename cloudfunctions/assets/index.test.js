@@ -1,6 +1,8 @@
 let documents;
 let currentOpenid;
 let documentGetError;
+let assetChangeAddError;
+let transactionRuns;
 
 function resetDocuments() {
   documents = {
@@ -10,10 +12,12 @@ function resetDocuments() {
   };
   currentOpenid = 'allowed-openid';
   documentGetError = null;
+  assetChangeAddError = null;
+  transactionRuns = 0;
 }
 
-function createCollection(name) {
-  const collection = documents[name];
+function createCollection(name, store = documents) {
+  const collection = store[name];
 
   return {
     where(filters) {
@@ -65,7 +69,8 @@ function createCollection(name) {
       };
     },
     async add({ data }) {
-      documents[name].push({ _id: `${name}-${documents[name].length + 1}`, ...data });
+      if (name === 'asset_changes' && assetChangeAddError) throw assetChangeAddError;
+      store[name].push({ _id: `${name}-${store[name].length + 1}`, ...data });
     }
   };
 }
@@ -81,6 +86,17 @@ const mockCloud = {
       collection: createCollection,
       serverDate() {
         return 'server-date';
+      },
+      async runTransaction(handler) {
+        transactionRuns += 1;
+        const transactionDocuments = JSON.parse(JSON.stringify(documents));
+        const result = await handler({
+          collection(name) {
+            return createCollection(name, transactionDocuments);
+          }
+        });
+        documents = transactionDocuments;
+        return result;
       }
     };
   }
@@ -134,6 +150,22 @@ test('updates the current family asset and records the change', async () => {
     operatorOpenid: 'allowed-openid',
     createdAt: 'server-date'
   })]);
+  expect(transactionRuns).toBe(1);
+});
+
+test('rolls back the asset update when the audit write fails', async () => {
+  documents.family_assets.current = { _id: 'current', totalAmount: 40000 };
+  assetChangeAddError = new Error('audit write failed');
+
+  await expect(main({
+    action: 'update',
+    totalAmount: 50000,
+    reason: '工资到账'
+  })).rejects.toThrow('audit write failed');
+
+  expect(documents.family_assets.current.totalAmount).toBe(40000);
+  expect(documents.asset_changes).toEqual([]);
+  expect(transactionRuns).toBe(1);
 });
 
 test('rejects denied access before reading or writing assets', async () => {

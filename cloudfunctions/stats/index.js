@@ -55,6 +55,7 @@ exports.main = async (event = {}) => {
   const projects = await listRedeemedProjects(start, end);
 
   const monthly = {};
+  const byCategory = {};
   const byRegistrant = {};
   let totalReturn = 0;
   let totalFixedReward = 0;
@@ -66,15 +67,26 @@ exports.main = async (event = {}) => {
     const holdingDays = daysInclusive(project.startDate, project.redeemDate);
 
     monthly[month] = (monthly[month] || 0) + projectReturn;
-    byRegistrant[project.registrantOpenid] = byRegistrant[project.registrantOpenid] || {
-      registrantOpenid: project.registrantOpenid,
+    byCategory[project.categoryId] = byCategory[project.categoryId] || {
+      categoryId: project.categoryId,
       projectCount: 0,
       principal: 0,
       actualTotalReturn: 0
     };
+    byCategory[project.categoryId].projectCount += 1;
+    byCategory[project.categoryId].principal += Number(project.principal || 0);
+    byCategory[project.categoryId].actualTotalReturn += projectReturn;
+    byRegistrant[project.registrantOpenid] = byRegistrant[project.registrantOpenid] || {
+      registrantOpenid: project.registrantOpenid,
+      projectCount: 0,
+      principal: 0,
+      actualTotalReturn: 0,
+      weightedPrincipalDays: 0
+    };
     byRegistrant[project.registrantOpenid].projectCount += 1;
     byRegistrant[project.registrantOpenid].principal += Number(project.principal || 0);
     byRegistrant[project.registrantOpenid].actualTotalReturn += projectReturn;
+    byRegistrant[project.registrantOpenid].weightedPrincipalDays += Number(project.principal || 0) * holdingDays;
 
     totalReturn += projectReturn;
     totalFixedReward += Number(project.actualFixedReward || 0);
@@ -87,9 +99,21 @@ exports.main = async (event = {}) => {
       year,
       totalReturn,
       annualizedRate: weightedPrincipalDays > 0 ? totalReturn / weightedPrincipalDays * 365 : 0,
-      fixedRewardShare: totalReturn > 0 ? totalFixedReward / totalReturn : 0,
+      fixedRewardShare: totalReturn !== 0 ? totalFixedReward / totalReturn : 0,
       monthly: Object.keys(monthly).sort().map((month) => ({ month, amount: monthly[month] })),
-      byRegistrant: Object.keys(byRegistrant).map((openid) => byRegistrant[openid])
+      byCategory: Object.keys(byCategory).map((categoryId) => byCategory[categoryId]),
+      byRegistrant: Object.keys(byRegistrant).map((openid) => {
+        const item = byRegistrant[openid];
+        return {
+          registrantOpenid: item.registrantOpenid,
+          projectCount: item.projectCount,
+          principal: item.principal,
+          actualTotalReturn: item.actualTotalReturn,
+          annualizedRate: item.weightedPrincipalDays > 0
+            ? item.actualTotalReturn / item.weightedPrincipalDays * 365
+            : 0
+        };
+      })
     }
   };
 };

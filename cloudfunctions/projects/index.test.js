@@ -3,7 +3,10 @@ let currentOpenid;
 
 function resetDocuments() {
   documents = {
-    users: [{ _id: 'user-1', openid: 'allowed-openid', enabled: true }],
+    users: [
+      { _id: 'user-1', openid: 'allowed-openid', nickname: '成员一', enabled: true },
+      { _id: 'user-2', openid: 'second-openid', nickname: '成员二', enabled: true }
+    ],
     categories: [{ _id: 'category-1', name: '银行理财', enabled: true, sortOrder: 1 }],
     projects: []
   };
@@ -115,8 +118,8 @@ const project = {
   fixedReward: 200
 };
 
-test('creates a project with the server identity as registrant', async () => {
-  await expect(main({ action: 'create', project: { ...project, registrantOpenid: 'spoofed' } }))
+test('defaults a new project registrant to the caller', async () => {
+  await expect(main({ action: 'create', project }))
     .resolves.toEqual({ ok: true, project: expect.objectContaining({
       _id: 'projects-1',
       registrantOpenid: 'allowed-openid',
@@ -130,6 +133,15 @@ test('creates a project with the server identity as registrant', async () => {
   }));
 });
 
+test('accepts either enabled family member as registrant and rejects other OpenIDs', async () => {
+  await expect(main({ action: 'create', project: { ...project, registrantOpenid: 'second-openid' } }))
+    .resolves.toEqual({ ok: true, project: expect.objectContaining({ registrantOpenid: 'second-openid' }) });
+
+  await expect(main({ action: 'create', project: { ...project, registrantOpenid: 'spoofed' } }))
+    .rejects.toThrow('REGISTRANT_INVALID');
+  expect(documents.projects).toHaveLength(1);
+});
+
 test('rejects unauthorized callers before accessing projects', async () => {
   currentOpenid = 'denied-openid';
 
@@ -137,16 +149,26 @@ test('rejects unauthorized callers before accessing projects', async () => {
   expect(documents.projects).toEqual([]);
 });
 
-test('updates editable fields without allowing registrant identity changes', async () => {
+test('updates editable fields and accepts the second enabled registrant', async () => {
   const created = await main({ action: 'create', project });
 
   await expect(main({ action: 'update', id: created.project._id, project: {
     ...project,
     name: '更新后的项目',
-    registrantOpenid: 'spoofed'
+    registrantOpenid: 'second-openid'
   } })).resolves.toEqual({ ok: true, project: expect.objectContaining({ name: '更新后的项目' }) });
 
-  expect(documents.projects[0].registrantOpenid).toBe('allowed-openid');
+  expect(documents.projects[0].registrantOpenid).toBe('second-openid');
+});
+
+test('lists the two enabled users for registrant selection', async () => {
+  await expect(main({ action: 'listUsers' })).resolves.toEqual({
+    ok: true,
+    users: [
+      { openid: 'allowed-openid', nickname: '成员一', role: '' },
+      { openid: 'second-openid', nickname: '成员二', role: '' }
+    ]
+  });
 });
 
 test('redeems using the stored start date and rejects dates before it', async () => {
@@ -184,6 +206,29 @@ test('allows negative actual return components when redeeming a realized loss', 
   expect(documents.projects[0]).toEqual(expect.objectContaining({
     actualInterest: -20,
     actualFixedReward: -100
+  }));
+});
+
+test('corrects redeemed raw fields without changing the redemption status', async () => {
+  const created = await main({ action: 'create', project });
+  await main({ action: 'redeem', id: created.project._id, redeemData: {
+    redeemDate: '2026-07-28', actualInterest: 20, actualFixedReward: 100
+  } });
+
+  await expect(main({ action: 'correctRedemption', id: created.project._id, redeemData: {
+    redeemDate: '2026-07-30', actualInterest: -30, actualFixedReward: 150
+  } })).resolves.toEqual({ ok: true, project: expect.objectContaining({
+    manualStatus: 'redeemed',
+    redeemDate: '2026-07-30',
+    actualInterest: -30,
+    actualFixedReward: 150
+  }) });
+
+  expect(documents.projects[0]).toEqual(expect.objectContaining({
+    manualStatus: 'redeemed',
+    redeemDate: '2026-07-30',
+    actualInterest: -30,
+    actualFixedReward: 150
   }));
 });
 

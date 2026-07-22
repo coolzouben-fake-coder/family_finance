@@ -1,10 +1,15 @@
 const { ensureAllowedSession } = require('../../services/session');
-const { createProject, updateProject, redeemProject, listCategories, listProjects } = require('../../services/cloud');
+const {
+  createProject, updateProject, redeemProject, correctRedemption, listCategories, listProjects, listUsers
+} = require('../../services/cloud');
 const { daysInclusive } = require('../../utils/date');
 const { calcExpectedInterest } = require('../../utils/finance');
 
 function emptyForm() {
-  return { name: '', categoryId: '', principal: '', startDate: '', endDate: '', expectedAnnualRate: '', fixedReward: '', remark: '' };
+  return {
+    name: '', categoryId: '', registrantOpenid: '', principal: '', startDate: '', endDate: '',
+    expectedAnnualRate: '', fixedReward: '', remark: ''
+  };
 }
 
 function showError(error) { wx.showToast({ title: error.message || '保存失败', icon: 'none' }); }
@@ -31,26 +36,39 @@ function validateForm(form) {
 
 Page({
   data: {
-    projectId: '', categories: [], selectedCategoryName: '', isLocked: false, lockedMessage: '', saving: false, redeeming: false,
+    projectId: '', categories: [], users: [], selectedCategoryName: '', selectedRegistrantName: '',
+    isLocked: false, isRedeemed: false, isCancelled: false, lockedMessage: '', saving: false, redeeming: false,
     form: emptyForm(), redeemForm: { redeemDate: '', actualInterest: '', actualFixedReward: '' }
   },
   onLoad(options) {
     const projectId = options.id || '';
     ensureAllowedSession()
-      .then(() => Promise.all([listCategories(), projectId ? listProjects() : Promise.resolve({ projects: [] })]))
-      .then(([{ categories }, { projects }]) => {
+      .then((session) => Promise.all([
+        listCategories(), listUsers(), projectId ? listProjects() : Promise.resolve({ projects: [] })
+      ]).then((results) => ({ session, results })))
+      .then(({ session, results: [{ categories }, { users }, { projects }] }) => {
         const project = projects.find((item) => item._id === projectId);
         if (projectId && !project) throw new Error('PROJECT_NOT_FOUND');
+        const selectableUsers = users.map((user) => ({
+          ...user,
+          displayName: user.nickname || (user.openid === session.openid ? '我' : '家庭成员')
+        }));
+        const registrantOpenid = project ? project.registrantOpenid : session.openid;
         const selectedCategory = project && categories.find((item) => item._id === project.categoryId);
+        const selectedRegistrant = selectableUsers.find((item) => item.openid === registrantOpenid);
+        const isRedeemed = Boolean(project && project.manualStatus === 'redeemed');
+        const isCancelled = Boolean(project && project.manualStatus === 'cancelled');
         this.setData({
-          projectId, categories, selectedCategoryName: selectedCategory ? selectedCategory.name : '',
-          isLocked: Boolean(project && project.manualStatus !== 'active'),
-          lockedMessage: project && project.manualStatus === 'cancelled' ? '此项目已取消，记录不可再编辑。' : '此项目已到账，记录不可再编辑。',
+          projectId, categories, users: selectableUsers, selectedCategoryName: selectedCategory ? selectedCategory.name : '',
+          selectedRegistrantName: selectedRegistrant ? selectedRegistrant.displayName : '',
+          isLocked: isRedeemed || isCancelled, isRedeemed, isCancelled,
+          lockedMessage: isCancelled ? '此项目已取消，记录不可再编辑。' : '基础信息已锁定，可在下方更正到账记录。',
           form: project ? {
-            name: project.name, categoryId: project.categoryId, principal: String(project.principal), startDate: project.startDate,
-            endDate: project.endDate, expectedAnnualRate: String(project.expectedAnnualRate || ''),
+            name: project.name, categoryId: project.categoryId, registrantOpenid: project.registrantOpenid,
+            principal: String(project.principal), startDate: project.startDate, endDate: project.endDate,
+            expectedAnnualRate: String(project.expectedAnnualRate || ''),
             fixedReward: String(project.fixedReward || ''), remark: project.remark || ''
-          } : emptyForm(),
+          } : { ...emptyForm(), registrantOpenid: session.openid },
           redeemForm: project && project.manualStatus === 'redeemed' ? {
             redeemDate: project.redeemDate, actualInterest: String(project.actualInterest || ''), actualFixedReward: String(project.actualFixedReward || '')
           } : this.data.redeemForm
@@ -63,6 +81,10 @@ Page({
   onCategoryChange(event) {
     const category = this.data.categories[Number(event.detail.value)];
     this.setData({ selectedCategoryName: category.name, 'form.categoryId': category._id });
+  },
+  onRegistrantChange(event) {
+    const user = this.data.users[Number(event.detail.value)];
+    this.setData({ selectedRegistrantName: user.displayName, 'form.registrantOpenid': user.openid });
   },
   save() {
     const form = this.data.form;
@@ -84,7 +106,8 @@ Page({
   },
   redeem() {
     this.setData({ redeeming: true });
-    redeemProject(this.data.projectId, {
+    const request = this.data.isRedeemed ? correctRedemption : redeemProject;
+    request(this.data.projectId, {
       ...this.data.redeemForm,
       actualInterest: Number(this.data.redeemForm.actualInterest || 0),
       actualFixedReward: Number(this.data.redeemForm.actualFixedReward || 0)

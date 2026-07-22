@@ -13,7 +13,20 @@
     <metric-card label="资金利用率" value="{{metrics.utilizationRate}}" />
   </view>
 
-  <view class="section">
+  <button wx:if="{{!editingAssets}}" class="asset-edit-button" bindtap="startAssetEdit">调整家庭总资产</button>
+  <view wx:else class="asset-editor surface">
+    <view class="section-title">调整家庭总资产</view>
+    <input class="asset-field" type="digit" value="{{assetAmountInput}}" placeholder="家庭总资产" bindinput="onAssetInput" />
+    <input class="asset-field" value="{{assetReasonInput}}" maxlength="100" placeholder="调整原因" bindinput="onAssetReasonInput" />
+    <view class="asset-actions">
+      <button class="secondary-button" disabled="{{savingAssets}}" bindtap="cancelAssetEdit">取消</button>
+      <button class="primary-button" loading="{{savingAssets}}" bindtap="saveAssets">保存</button>
+    </view>
+  </view>
+
+  <view wx:if="{{errorMessage}}" class="error-state surface">{{errorMessage}}</view>
+
+  <view wx:if="{{!errorMessage}}" class="section">
     <view class="section-title">已到期待确认</view>
     <view wx:if="{{overdueProjects.length === 0}}" class="empty">暂无需要确认的项目</view>
     <view wx:for="{{overdueProjects}}" wx:key="_id" class="reminder reminder--overdue">
@@ -22,7 +35,7 @@
     </view>
   </view>
 
-  <view class="section">
+  <view wx:if="{{!errorMessage}}" class="section">
     <view class="section-title">即将到期</view>
     <view wx:if="{{dueSoonProjects.length === 0}}" class="empty">暂无即将到期项目</view>
     <view wx:for="{{dueSoonProjects}}" wx:key="_id" class="reminder reminder--due-soon">

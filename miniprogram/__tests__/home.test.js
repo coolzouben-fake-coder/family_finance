@@ -1,11 +1,16 @@
 const mockEnsureAllowedSession = jest.fn();
 const mockGetAssets = jest.fn();
 const mockListProjects = jest.fn();
+const mockUpdateAssets = jest.fn();
 const fs = require('fs');
 const path = require('path');
 
 jest.mock('../services/session', () => ({ ensureAllowedSession: mockEnsureAllowedSession }));
-jest.mock('../services/cloud', () => ({ getAssets: mockGetAssets, listProjects: mockListProjects }));
+jest.mock('../services/cloud', () => ({
+  getAssets: mockGetAssets,
+  listProjects: mockListProjects,
+  updateAssets: mockUpdateAssets
+}));
 
 let pageDefinition;
 
@@ -18,6 +23,8 @@ function createHomePage() {
   };
 
   page.loadDashboard = pageDefinition.loadDashboard.bind(page);
+  page.startAssetEdit = pageDefinition.startAssetEdit.bind(page);
+  page.saveAssets = pageDefinition.saveAssets.bind(page);
   return page;
 }
 
@@ -30,6 +37,7 @@ async function flushPromises() {
 describe('home dashboard', () => {
   beforeEach(() => {
     jest.resetModules();
+    jest.clearAllMocks();
     jest.useFakeTimers();
     jest.setSystemTime(new Date('2026-07-22T12:00:00'));
     mockEnsureAllowedSession.mockResolvedValue();
@@ -40,6 +48,8 @@ describe('home dashboard', () => {
         { _id: 'overdue', name: '已到期', principal: 10000, startDate: '2026-07-01', endDate: '2026-07-21', manualStatus: 'active' }
       ]
     });
+    mockUpdateAssets.mockResolvedValue({ asset: { totalAmount: 60000 } });
+    global.wx = { showToast: jest.fn() };
     global.Page = (definition) => { pageDefinition = definition; };
     require('../pages/home/home');
   });
@@ -47,6 +57,7 @@ describe('home dashboard', () => {
   afterEach(() => {
     jest.useRealTimers();
     delete global.Page;
+    delete global.wx;
   });
 
   test('loads active capital and separates due reminder projects', async () => {
@@ -76,5 +87,43 @@ describe('home dashboard', () => {
     expect(styles).toContain('border-left: 6rpx solid var(--color-danger)');
     expect(styles).toContain('.reminder--due-soon');
     expect(styles).toContain('border-left: 6rpx solid var(--color-warning)');
+  });
+
+  test('updates total assets from the dashboard with a required reason', async () => {
+    const page = createHomePage();
+    page.data.totalAssetsValue = 50000;
+    page.startAssetEdit();
+    page.data.assetAmountInput = '60000';
+    page.data.assetReasonInput = '工资到账';
+
+    page.saveAssets();
+    await flushPromises();
+    await flushPromises();
+
+    expect(mockUpdateAssets).toHaveBeenCalledWith(60000, '工资到账');
+    expect(page.data.editingAssets).toBe(false);
+  });
+
+  test('does not update assets without a reason', () => {
+    const page = createHomePage();
+    page.data.assetAmountInput = '60000';
+    page.data.assetReasonInput = '   ';
+
+    page.saveAssets();
+
+    expect(mockUpdateAssets).not.toHaveBeenCalled();
+    expect(global.wx.showToast).toHaveBeenCalledWith({ title: '请填写调整原因', icon: 'none' });
+  });
+
+  test('shows a page-level error when dashboard loading fails', async () => {
+    mockGetAssets.mockRejectedValue(new Error('offline'));
+    const page = createHomePage();
+
+    page.loadDashboard();
+    await flushPromises();
+    await flushPromises();
+
+    expect(page.data.loading).toBe(false);
+    expect(page.data.errorMessage).toBe('资金看板加载失败，请稍后重试');
   });
 });
