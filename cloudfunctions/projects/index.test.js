@@ -149,16 +149,19 @@ test('rejects unauthorized callers before accessing projects', async () => {
   expect(documents.projects).toEqual([]);
 });
 
-test('updates editable fields and accepts the second enabled registrant', async () => {
+test('rejects base project updates after creation and preserves the stored project', async () => {
   const created = await main({ action: 'create', project });
 
   await expect(main({ action: 'update', id: created.project._id, project: {
     ...project,
     name: '更新后的项目',
     registrantOpenid: 'second-openid'
-  } })).resolves.toEqual({ ok: true, project: expect.objectContaining({ name: '更新后的项目' }) });
+  } })).rejects.toThrow('PROJECT_BASE_LOCKED');
 
-  expect(documents.projects[0].registrantOpenid).toBe('second-openid');
+  expect(documents.projects[0]).toEqual(expect.objectContaining({
+    name: '28 天理财',
+    registrantOpenid: 'allowed-openid'
+  }));
 });
 
 test('lists the two enabled users for registrant selection', async () => {

@@ -127,18 +127,8 @@ async function createProject(openid, data, enabledUsers) {
 }
 
 async function updateProject(id, data, enabledUsers) {
-  const existing = await getProject(id);
-  if (existing.manualStatus !== 'active') throw new Error('PROJECT_NOT_ACTIVE');
-  const project = validateBaseProject(data);
-  await requireEnabledCategory(project.categoryId);
-  const payload = {
-    ...project,
-    registrantOpenid: selectRegistrant(data.registrantOpenid, existing.registrantOpenid, enabledUsers),
-    expectedInterest: calculateExpectedInterest(project.principal, project.expectedAnnualRate, project.startDate, project.endDate),
-    updatedAt: db.serverDate()
-  };
-  await db.collection('projects').doc(id).update({ data: payload });
-  return { _id: id, ...existing, ...payload };
+  await getProject(id);
+  throw new Error('PROJECT_BASE_LOCKED');
 }
 
 function validateRedemption(project, data) {
