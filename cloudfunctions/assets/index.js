@@ -3,6 +3,7 @@ const cloud = require('wx-server-sdk');
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 
 const db = cloud.database();
+const ASSET_DOCUMENT_ID = 'current';
 
 async function requireAllowed(openid) {
   const result = await db.collection('users').where({ openid, enabled: true }).limit(1).get();
@@ -12,40 +13,31 @@ async function requireAllowed(openid) {
 }
 
 async function getAssets() {
-  const result = await db.collection('family_assets').limit(1).get();
-  return result.data[0] || { totalAmount: 0 };
+  const result = await db.collection('family_assets').doc(ASSET_DOCUMENT_ID).get();
+  return result.data || { totalAmount: 0 };
 }
 
 async function updateAssets(openid, totalAmount, reason) {
-  if (Number(totalAmount) < 0) {
+  const amount = Number(totalAmount);
+  if (!Number.isFinite(amount) || amount < 0) {
     throw new Error('TOTAL_AMOUNT_INVALID');
   }
 
   const current = await getAssets();
   const now = db.serverDate();
 
-  if (current._id) {
-    await db.collection('family_assets').doc(current._id).update({
-      data: {
-        totalAmount: Number(totalAmount),
-        updatedByOpenid: openid,
-        updatedAt: now
-      }
-    });
-  } else {
-    await db.collection('family_assets').add({
-      data: {
-        totalAmount: Number(totalAmount),
-        updatedByOpenid: openid,
-        updatedAt: now
-      }
-    });
-  }
+  await db.collection('family_assets').doc(ASSET_DOCUMENT_ID).set({
+    data: {
+      totalAmount: amount,
+      updatedByOpenid: openid,
+      updatedAt: now
+    }
+  });
 
   await db.collection('asset_changes').add({
     data: {
       beforeAmount: Number(current.totalAmount || 0),
-      afterAmount: Number(totalAmount),
+      afterAmount: amount,
       reason: reason || '调整家庭总资产',
       operatorOpenid: openid,
       createdAt: now

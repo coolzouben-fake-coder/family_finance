@@ -41,3 +41,26 @@
 ## Concerns
 
 - The WeChat Developer Tools deployment and live cloud-database verification from Step 5 cannot be performed in this shell environment. The cloud function must still be deployed and exercised against the target environment with the specified update payload.
+
+---
+
+## Review Fix Report
+
+### Fixes Applied
+
+- Validated update amounts with `Number.isFinite(Number(totalAmount))` and rejected negative values before any database writes.
+- Replaced arbitrary `family_assets` reads and writes with the fixed `family_assets/current` singleton document. Updates now use `set`, preventing duplicate singleton records during concurrent initial updates.
+- Isolated cloud-function test state with `beforeEach` and added denied-access, malformed numeric input, and fixed-singleton coverage.
+
+### Verification
+
+- `npm test -- cloudfunctions/assets/index.test.js --runInBand`: passed, 1 suite and 8 tests.
+- `npm test -- --runInBand`: passed, 5 suites and 20 tests.
+- `node --check cloudfunctions/assets/index.js`: passed.
+- `git diff --check`: passed.
+
+### Files Changed
+
+- `cloudfunctions/assets/index.js`
+- `cloudfunctions/assets/index.test.js`
+- `.superpowers/sdd/task-4-report.md`
