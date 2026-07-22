@@ -90,6 +90,8 @@ describe('home dashboard', () => {
 
     expect(page.data.totalAssetsValue).toBeNull();
     expect(page.data.dashboardReady).toBe(false);
+    expect(markup).toContain('wx:if="{{dashboardReady}}" class="grid"');
+    expect(markup).toContain('wx:if="{{loading && !dashboardReady && !errorMessage}}"');
     expect(markup).toContain('wx:if="{{dashboardReady && !editingAssets}}"');
     page.startAssetEdit();
 
@@ -168,6 +170,9 @@ describe('home dashboard', () => {
     expect(page.data.loading).toBe(false);
     expect(page.data.dashboardReady).toBe(false);
     expect(page.data.errorMessage).toBe('资金看板加载失败，请稍后重试');
+    const markup = fs.readFileSync(path.join(__dirname, '../pages/home/home.wxml'), 'utf8');
+    expect(markup).toContain('wx:if="{{errorMessage}}"');
+    expect(markup).toContain('wx:if="{{dashboardReady}}" class="section"');
     page.startAssetEdit();
     page.data.assetAmountInput = '0';
     page.data.assetReasonInput = '错误覆盖';

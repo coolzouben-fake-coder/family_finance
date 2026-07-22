@@ -19,6 +19,17 @@ function isMissingDocumentError(error) {
   return error && error.errCode === 'DATABASE_DOCUMENT_NOT_EXIST';
 }
 
+function normalizeReason(reason) {
+  if (typeof reason !== 'string') {
+    throw new Error('ASSET_REASON_INVALID');
+  }
+  const normalized = reason.trim();
+  if (!normalized || normalized.length > 100) {
+    throw new Error('ASSET_REASON_INVALID');
+  }
+  return normalized;
+}
+
 async function getAssets(database = db) {
   try {
     const result = await database.collection('family_assets').doc(ASSET_DOCUMENT_ID).get();
@@ -43,6 +54,7 @@ async function updateAssets(openid, totalAmount, reason) {
   if (!Number.isFinite(amount) || amount < 0) {
     throw new Error('TOTAL_AMOUNT_INVALID');
   }
+  const normalizedReason = normalizeReason(reason);
 
   return db.runTransaction(async (transaction) => {
     const current = await getAssets(transaction);
@@ -57,7 +69,7 @@ async function updateAssets(openid, totalAmount, reason) {
     await transaction.collection('asset_changes').add({ data: {
       beforeAmount: Number(current.totalAmount || 0),
       afterAmount: amount,
-      reason: typeof reason === 'string' && reason.trim() ? reason.trim() : '调整家庭总资产',
+      reason: normalizedReason,
       operatorOpenid: openid,
       createdAt: now
     } });

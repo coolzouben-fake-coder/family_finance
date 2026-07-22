@@ -223,9 +223,37 @@ test.each([
 test.each([50000, '50000', '50000.25'])(
   'accepts numeric total amount %p',
   async (totalAmount) => {
-    await expect(main({ action: 'update', totalAmount })).resolves.toEqual({
+    await expect(main({ action: 'update', totalAmount, reason: '资产调整' })).resolves.toEqual({
       ok: true,
       asset: expect.objectContaining({ totalAmount: Number(totalAmount) })
     });
   }
 );
+
+test.each([
+  undefined,
+  null,
+  '',
+  '   ',
+  '1'.repeat(101),
+  123,
+  true,
+  [],
+  {}
+])(
+  'rejects invalid asset update reason %p before writing',
+  async (reason) => {
+    await expect(main({ action: 'update', totalAmount: 50000, reason })).rejects.toThrow('ASSET_REASON_INVALID');
+    expect(documents.family_assets).toEqual({});
+    expect(documents.asset_changes).toEqual([]);
+  }
+);
+
+test('trims the asset update reason before recording the audit row', async () => {
+  await expect(main({ action: 'update', totalAmount: 50000, reason: '  工资到账  ' })).resolves.toEqual({
+    ok: true,
+    asset: expect.objectContaining({ totalAmount: 50000 })
+  });
+
+  expect(documents.asset_changes[0].reason).toBe('工资到账');
+});

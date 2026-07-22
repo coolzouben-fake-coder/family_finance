@@ -6,7 +6,9 @@
     </view>
   </view>
 
-  <view class="grid">
+  <view wx:if="{{loading && !dashboardReady && !errorMessage}}" class="loading-state surface">资金看板加载中</view>
+
+  <view wx:if="{{dashboardReady}}" class="grid">
     <metric-card label="家庭总资产" value="{{metrics.totalAssets}}" />
     <metric-card label="当前理财金额" value="{{metrics.investedAmount}}" />
     <metric-card label="空闲资金" value="{{metrics.idleAmount}}" />
@@ -26,7 +28,7 @@
 
   <view wx:if="{{errorMessage}}" class="error-state surface">{{errorMessage}}</view>
 
-  <view wx:if="{{!errorMessage}}" class="section">
+  <view wx:if="{{dashboardReady}}" class="section">
     <view class="section-title">已到期待确认</view>
     <view wx:if="{{overdueProjects.length === 0}}" class="empty">暂无需要确认的项目</view>
     <view wx:for="{{overdueProjects}}" wx:key="_id" class="reminder reminder--overdue">
@@ -35,7 +37,7 @@
     </view>
   </view>
 
-  <view wx:if="{{!errorMessage}}" class="section">
+  <view wx:if="{{dashboardReady}}" class="section">
     <view class="section-title">即将到期</view>
     <view wx:if="{{dueSoonProjects.length === 0}}" class="empty">暂无即将到期项目</view>
     <view wx:for="{{dueSoonProjects}}" wx:key="_id" class="reminder reminder--due-soon">

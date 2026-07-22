@@ -58,11 +58,19 @@
   gap: 16rpx;
 }
 
+.loading-state,
 .error-state {
   margin-top: var(--space-section);
   padding: 24rpx;
-  color: var(--color-danger);
   font-size: var(--font-caption);
+}
+
+.loading-state {
+  color: var(--color-secondary-text);
+}
+
+.error-state {
+  color: var(--color-danger);
 }
 
 .section {
