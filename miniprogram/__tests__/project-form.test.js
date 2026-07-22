@@ -3,6 +3,7 @@ const mockCreateProject = jest.fn();
 const mockUpdateProject = jest.fn();
 const mockRedeemProject = jest.fn();
 const mockCorrectRedemption = jest.fn();
+const mockRemoveProject = jest.fn();
 const mockListCategories = jest.fn();
 const mockListProjects = jest.fn();
 const mockListUsers = jest.fn();
@@ -13,6 +14,7 @@ jest.mock('../services/cloud', () => ({
   updateProject: mockUpdateProject,
   redeemProject: mockRedeemProject,
   correctRedemption: mockCorrectRedemption,
+  removeProject: mockRemoveProject,
   listCategories: mockListCategories,
   listProjects: mockListProjects,
   listUsers: mockListUsers
@@ -41,6 +43,9 @@ function createProjectFormPage(form) {
   page.save = pageDefinition.save.bind(page);
   page.onLoad = pageDefinition.onLoad.bind(page);
   page.redeem = pageDefinition.redeem.bind(page);
+  if (pageDefinition.remove) page.remove = pageDefinition.remove.bind(page);
+  if (pageDefinition.onDateChange) page.onDateChange = pageDefinition.onDateChange.bind(page);
+  if (pageDefinition.onRedeemDateChange) page.onRedeemDateChange = pageDefinition.onRedeemDateChange.bind(page);
   return page;
 }
 
@@ -69,13 +74,14 @@ describe('project form', () => {
     mockUpdateProject.mockResolvedValue();
     mockRedeemProject.mockResolvedValue();
     mockCorrectRedemption.mockResolvedValue();
+    mockRemoveProject.mockResolvedValue();
     mockListCategories.mockResolvedValue({ categories: [{ _id: 'category', name: '银行理财' }] });
     mockListProjects.mockResolvedValue({ projects: [] });
     mockListUsers.mockResolvedValue({ users: [
       { openid: 'allowed-openid', nickname: '成员一' },
       { openid: 'second-openid', nickname: '成员二' }
     ] });
-    global.wx = { showToast: jest.fn(), navigateBack: jest.fn() };
+    global.wx = { showToast: jest.fn(), navigateBack: jest.fn(), showModal: jest.fn(({ success }) => success({ confirm: true })) };
     global.Page = (definition) => { pageDefinition = definition; };
     require('../pages/project-form/project-form');
   });
@@ -207,7 +213,7 @@ describe('project form', () => {
 
     expect(markup).toContain('wx:if="{{loading}}"');
     expect(markup).toContain('wx:elif="{{errorMessage}}"');
-    expect(markup).toContain('disabled="{{saving || redeeming}}"');
+    expect(markup).toContain('disabled="{{saving || redeeming || removing}}"');
   });
 
   test('uses explicit field height to prevent placeholder clipping', () => {
@@ -216,11 +222,71 @@ describe('project form', () => {
     const markup = fs.readFileSync(path.join(__dirname, '../pages/project-form/project-form.wxml'), 'utf8');
     const styles = fs.readFileSync(path.join(__dirname, '../pages/project-form/project-form.wxss'), 'utf8');
 
-    expect(markup).toContain('placeholder="开始日期 YYYY-MM-DD"');
+    expect(markup).toContain("{{form.startDate || '开始日期 YYYY-MM-DD'}}");
     expect(markup).not.toContain('class="form-label"');
     expect(styles).toContain('height: 96rpx');
     expect(styles).toContain('line-height: 56rpx');
     expect(styles).toContain('padding: 20rpx');
+  });
+
+  test('renders date pickers and updates selected date values', () => {
+    const markup = require('fs').readFileSync(require('path').join(__dirname, '../pages/project-form/project-form.wxml'), 'utf8');
+    const page = createProjectFormPage();
+
+    page.onDateChange({ currentTarget: { dataset: { field: 'startDate' } }, detail: { value: '2026-07-02' } });
+    page.onRedeemDateChange({ currentTarget: { dataset: { field: 'redeemDate' } }, detail: { value: '2026-07-30' } });
+
+    expect(markup).toContain('mode="date"');
+    expect(markup).toContain('bindchange="onDateChange"');
+    expect(markup).toContain('bindchange="onRedeemDateChange"');
+    expect(page.data.form.startDate).toBe('2026-07-02');
+    expect(page.data.redeemForm.redeemDate).toBe('2026-07-30');
+  });
+
+  test('locks existing active projects and exposes delete from the detail form', async () => {
+    mockListProjects.mockResolvedValue({ projects: [{
+      _id: 'active-id',
+      name: '进行中项目',
+      categoryId: 'category',
+      registrantOpenid: 'allowed-openid',
+      principal: 10000,
+      startDate: '2026-07-01',
+      endDate: '2026-07-28',
+      expectedAnnualRate: 0.03,
+      fixedReward: 100,
+      remark: '',
+      manualStatus: 'active'
+    }] });
+    const markup = require('fs').readFileSync(require('path').join(__dirname, '../pages/project-form/project-form.wxml'), 'utf8');
+    const page = createProjectFormPage();
+
+    page.onLoad({ id: 'active-id' });
+    await flushPromises();
+    await flushPromises();
+
+    expect(page.data.isLocked).toBe(true);
+    expect(page.data.lockedMessage).toContain('创建后');
+    expect(markup).toContain('bindtap="remove"');
+    expect(markup).toContain('删除项目');
+    page.save();
+    expect(mockUpdateProject).not.toHaveBeenCalled();
+  });
+
+  test('deletes an existing project after confirmation', async () => {
+    const page = createProjectFormPage();
+    page.data.ready = true;
+    page.data.loading = false;
+    page.data.projectId = 'project-id';
+
+    page.remove();
+    await flushPromises();
+
+    expect(global.wx.showModal).toHaveBeenCalledWith(expect.objectContaining({
+      title: '删除项目',
+      confirmText: '删除'
+    }));
+    expect(mockRemoveProject).toHaveBeenCalledWith('project-id');
+    expect(global.wx.navigateBack).toHaveBeenCalled();
   });
 
   test('submits corrections for redeemed projects through the dedicated action', async () => {

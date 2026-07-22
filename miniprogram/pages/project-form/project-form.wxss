@@ -40,3 +40,11 @@
 .empty-field { margin-bottom: 16rpx; padding: 24rpx; border-radius: var(--radius-card); background: var(--color-grouped-background); color: var(--color-tertiary-text); box-sizing: border-box; font-size: 26rpx; }
 .form-state { padding: 32rpx; text-align: center; }
 .error-state { color: var(--color-danger); }
+
+.danger-button {
+  margin-top: 24rpx;
+  background: transparent;
+  color: var(--color-danger);
+  font-size: var(--font-caption);
+  line-height: 72rpx;
+}

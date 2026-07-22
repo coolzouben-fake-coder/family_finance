@@ -1,6 +1,6 @@
 const { ensureAllowedSession } = require('../../services/session');
 const {
-  createProject, updateProject, redeemProject, correctRedemption, listCategories, listProjects, listUsers
+  createProject, updateProject, redeemProject, correctRedemption, removeProject, listCategories, listProjects, listUsers
 } = require('../../services/cloud');
 const { daysInclusive } = require('../../utils/date');
 const { calcExpectedInterest } = require('../../utils/finance');
@@ -38,7 +38,7 @@ Page({
   data: {
     projectId: '', categories: [], users: [], selectedCategoryName: '', selectedRegistrantName: '',
     loading: true, ready: false, errorMessage: '',
-    isLocked: false, isRedeemed: false, isCancelled: false, lockedMessage: '', saving: false, redeeming: false,
+    isLocked: false, isRedeemed: false, isCancelled: false, lockedMessage: '', saving: false, redeeming: false, removing: false,
     form: emptyForm(), redeemForm: { redeemDate: '', actualInterest: '', actualFixedReward: '' }
   },
   onLoad(options) {
@@ -64,8 +64,8 @@ Page({
           loading: false, ready: true, categories, users: selectableUsers,
           selectedCategoryName: selectedCategory ? selectedCategory.name : '',
           selectedRegistrantName: selectedRegistrant ? selectedRegistrant.displayName : '',
-          isLocked: isRedeemed || isCancelled, isRedeemed, isCancelled,
-          lockedMessage: isCancelled ? '此项目已取消，记录不可再编辑。' : '基础信息已锁定，可在下方更正到账记录。',
+          isLocked: Boolean(project), isRedeemed, isCancelled,
+          lockedMessage: isCancelled ? '此项目已取消，记录不可再编辑。' : '项目创建后基础信息不可编辑，可确认到账或删除项目。',
           form: project ? {
             name: project.name, categoryId: project.categoryId, registrantOpenid: project.registrantOpenid,
             principal: String(project.principal), startDate: project.startDate, endDate: project.endDate,
@@ -85,6 +85,8 @@ Page({
   },
   onInput(event) { this.setData({ [`form.${event.currentTarget.dataset.field}`]: event.detail.value }); },
   onRedeemInput(event) { this.setData({ [`redeemForm.${event.currentTarget.dataset.field}`]: event.detail.value }); },
+  onDateChange(event) { this.setData({ [`form.${event.currentTarget.dataset.field}`]: event.detail.value }); },
+  onRedeemDateChange(event) { this.setData({ [`redeemForm.${event.currentTarget.dataset.field}`]: event.detail.value }); },
   onCategoryChange(event) {
     const category = this.data.categories[Number(event.detail.value)];
     this.setData({ selectedCategoryName: category.name, 'form.categoryId': category._id });
@@ -94,7 +96,7 @@ Page({
     this.setData({ selectedRegistrantName: user.displayName, 'form.registrantOpenid': user.openid });
   },
   save() {
-    if (!this.data.ready || this.data.loading || this.data.saving || this.data.redeeming) return;
+    if (!this.data.ready || this.data.loading || this.data.isLocked || this.data.saving || this.data.redeeming || this.data.removing) return;
     const form = this.data.form;
     const error = validateForm(form);
     if (error) {
@@ -113,7 +115,7 @@ Page({
     request.then(() => wx.navigateBack()).catch(showError).finally(() => this.setData({ saving: false }));
   },
   redeem() {
-    if (!this.data.ready || this.data.loading || !this.data.projectId || this.data.saving || this.data.redeeming) return;
+    if (!this.data.ready || this.data.loading || !this.data.projectId || this.data.saving || this.data.redeeming || this.data.removing) return;
     this.setData({ redeeming: true });
     const request = this.data.isRedeemed ? correctRedemption : redeemProject;
     request(this.data.projectId, {
@@ -121,5 +123,22 @@ Page({
       actualInterest: Number(this.data.redeemForm.actualInterest || 0),
       actualFixedReward: Number(this.data.redeemForm.actualFixedReward || 0)
     }).then(() => wx.navigateBack()).catch(showError).finally(() => this.setData({ redeeming: false }));
+  },
+  remove() {
+    if (!this.data.ready || this.data.loading || !this.data.projectId || this.data.saving || this.data.redeeming || this.data.removing) return;
+    wx.showModal({
+      title: '删除项目',
+      content: '删除后本金和收益都会从统计中移除，是否继续？',
+      confirmText: '删除',
+      confirmColor: '#FF3B30',
+      success: (result) => {
+        if (!result.confirm) return;
+        this.setData({ removing: true });
+        removeProject(this.data.projectId)
+          .then(() => wx.navigateBack())
+          .catch(showError)
+          .finally(() => this.setData({ removing: false }));
+      }
+    });
   }
 });

@@ -2,31 +2,38 @@
   <view wx:if="{{loading}}" class="form-state surface caption">正在加载项目</view>
   <view wx:elif="{{errorMessage}}" class="form-state error-state surface">{{errorMessage}}</view>
   <block wx:else>
-  <input class="field" placeholder="项目名称" value="{{form.name}}" data-field="name" bindinput="onInput" disabled="{{isLocked || saving || redeeming}}" />
+  <input class="field" placeholder="项目名称" value="{{form.name}}" data-field="name" bindinput="onInput" disabled="{{isLocked || saving || redeeming || removing}}" />
   <view wx:if="{{categories.length > 0}}">
-    <picker mode="selector" range="{{categories}}" range-key="name" bindchange="onCategoryChange" disabled="{{isLocked || saving || redeeming}}">
+    <picker mode="selector" range="{{categories}}" range-key="name" bindchange="onCategoryChange" disabled="{{isLocked || saving || redeeming || removing}}">
       <view class="field picker-field">{{selectedCategoryName || '选择品类'}}</view>
     </picker>
   </view>
   <view wx:else class="empty-field">请先部署并运行 bootstrap 云函数初始化品类</view>
-  <picker mode="selector" range="{{users}}" range-key="displayName" bindchange="onRegistrantChange" disabled="{{isLocked || saving || redeeming}}">
+  <picker mode="selector" range="{{users}}" range-key="displayName" bindchange="onRegistrantChange" disabled="{{isLocked || saving || redeeming || removing}}">
     <view class="field picker-field">登记人：{{selectedRegistrantName || '选择家庭成员'}}</view>
   </picker>
-  <input class="field" type="digit" placeholder="本金" value="{{form.principal}}" data-field="principal" bindinput="onInput" disabled="{{isLocked || saving || redeeming}}" />
-  <input class="field" placeholder="开始日期 YYYY-MM-DD" value="{{form.startDate}}" data-field="startDate" bindinput="onInput" disabled="{{isLocked || saving || redeeming}}" />
-  <input class="field" placeholder="结束日期 YYYY-MM-DD" value="{{form.endDate}}" data-field="endDate" bindinput="onInput" disabled="{{isLocked || saving || redeeming}}" />
-  <input class="field" type="digit" placeholder="预期年化，如 0.03" value="{{form.expectedAnnualRate}}" data-field="expectedAnnualRate" bindinput="onInput" disabled="{{isLocked || saving || redeeming}}" />
-  <input class="field" type="digit" placeholder="固定奖励" value="{{form.fixedReward}}" data-field="fixedReward" bindinput="onInput" disabled="{{isLocked || saving || redeeming}}" />
-  <textarea class="textarea" placeholder="备注" value="{{form.remark}}" data-field="remark" bindinput="onInput" disabled="{{isLocked || saving || redeeming}}" />
-  <button wx:if="{{!isLocked}}" class="primary-button" loading="{{saving}}" disabled="{{saving || redeeming}}" bindtap="save">保存</button>
+  <input class="field" type="digit" placeholder="本金" value="{{form.principal}}" data-field="principal" bindinput="onInput" disabled="{{isLocked || saving || redeeming || removing}}" />
+  <picker mode="date" value="{{form.startDate}}" data-field="startDate" bindchange="onDateChange" disabled="{{isLocked || saving || redeeming || removing}}">
+    <view class="field picker-field">{{form.startDate || '开始日期 YYYY-MM-DD'}}</view>
+  </picker>
+  <picker mode="date" value="{{form.endDate}}" data-field="endDate" bindchange="onDateChange" disabled="{{isLocked || saving || redeeming || removing}}">
+    <view class="field picker-field">{{form.endDate || '结束日期 YYYY-MM-DD'}}</view>
+  </picker>
+  <input class="field" type="digit" placeholder="预期年化，如 0.03" value="{{form.expectedAnnualRate}}" data-field="expectedAnnualRate" bindinput="onInput" disabled="{{isLocked || saving || redeeming || removing}}" />
+  <input class="field" type="digit" placeholder="固定奖励" value="{{form.fixedReward}}" data-field="fixedReward" bindinput="onInput" disabled="{{isLocked || saving || redeeming || removing}}" />
+  <textarea class="textarea" placeholder="备注" value="{{form.remark}}" data-field="remark" bindinput="onInput" disabled="{{isLocked || saving || redeeming || removing}}" />
+  <button wx:if="{{!isLocked}}" class="primary-button" loading="{{saving}}" disabled="{{saving || redeeming || removing}}" bindtap="save">保存</button>
   <view wx:if="{{projectId && !isCancelled}}" class="redeem surface">
     <view class="section-title">{{isRedeemed ? '更正到账记录' : '确认到账'}}</view>
     <view wx:if="{{isRedeemed}}" class="history-warning">更正后会重新计算对应年度的历史统计。</view>
-    <input class="field" placeholder="到账日期 YYYY-MM-DD" value="{{redeemForm.redeemDate}}" data-field="redeemDate" bindinput="onRedeemInput" disabled="{{saving || redeeming}}" />
-    <input class="field" type="text" placeholder="实际利息" value="{{redeemForm.actualInterest}}" data-field="actualInterest" bindinput="onRedeemInput" disabled="{{saving || redeeming}}" />
-    <input class="field" type="text" placeholder="实际固定奖励" value="{{redeemForm.actualFixedReward}}" data-field="actualFixedReward" bindinput="onRedeemInput" disabled="{{saving || redeeming}}" />
-    <button class="secondary-button" loading="{{redeeming}}" disabled="{{saving || redeeming}}" bindtap="redeem">{{isRedeemed ? '保存更正' : '确认到账'}}</button>
+    <picker mode="date" value="{{redeemForm.redeemDate}}" data-field="redeemDate" bindchange="onRedeemDateChange" disabled="{{saving || redeeming || removing}}">
+      <view class="field picker-field">{{redeemForm.redeemDate || '到账日期 YYYY-MM-DD'}}</view>
+    </picker>
+    <input class="field" type="text" placeholder="实际利息" value="{{redeemForm.actualInterest}}" data-field="actualInterest" bindinput="onRedeemInput" disabled="{{saving || redeeming || removing}}" />
+    <input class="field" type="text" placeholder="实际固定奖励" value="{{redeemForm.actualFixedReward}}" data-field="actualFixedReward" bindinput="onRedeemInput" disabled="{{saving || redeeming || removing}}" />
+    <button class="secondary-button" loading="{{redeeming}}" disabled="{{saving || redeeming || removing}}" bindtap="redeem">{{isRedeemed ? '保存更正' : '确认到账'}}</button>
   </view>
   <view wx:if="{{isLocked}}" class="redeemed-note surface caption">{{lockedMessage}}</view>
+  <button wx:if="{{projectId}}" class="danger-button" loading="{{removing}}" disabled="{{saving || redeeming || removing}}" bindtap="remove">删除项目</button>
   </block>
 </view>
