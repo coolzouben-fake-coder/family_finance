@@ -210,19 +210,17 @@ describe('project form', () => {
     expect(markup).toContain('disabled="{{saving || redeeming}}"');
   });
 
-  test('uses stable row-based form layout to prevent input overlap', () => {
+  test('uses explicit field height to prevent placeholder clipping', () => {
     const fs = require('fs');
     const path = require('path');
     const markup = fs.readFileSync(path.join(__dirname, '../pages/project-form/project-form.wxml'), 'utf8');
     const styles = fs.readFileSync(path.join(__dirname, '../pages/project-form/project-form.wxss'), 'utf8');
 
-    expect(markup).toContain('class="form-group surface"');
-    expect(markup).toContain('class="form-row"');
-    expect(markup).toContain('class="form-label"');
-    expect(styles).toContain('min-height: 116rpx');
-    expect(styles).toContain('height: 88rpx');
-    expect(styles).toContain('line-height: 88rpx');
-    expect(styles).toContain('text-align: right');
+    expect(markup).toContain('placeholder="开始日期 YYYY-MM-DD"');
+    expect(markup).not.toContain('class="form-label"');
+    expect(styles).toContain('height: 96rpx');
+    expect(styles).toContain('line-height: 56rpx');
+    expect(styles).toContain('padding: 20rpx');
   });
 
   test('submits corrections for redeemed projects through the dedicated action', async () => {
