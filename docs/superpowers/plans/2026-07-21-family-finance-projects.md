@@ -19,13 +19,16 @@
 - Actual holding days include both the start date and redeem date.
 - Actual annualized return is computed as `actualTotalReturn / principal / holdingDays * 365`.
 - Due-soon threshold defaults to 3 days.
+- The UI must follow an Apple-inspired design language: calm iOS-style hierarchy, system background colors, large readable numerals, restrained cards, native-feeling controls, clear status colors, and no decorative gradients or marketing-style hero sections.
 
 ---
 
 ## File Structure
 
-- Create `project.config.json`: WeChat Developer Tools project configuration.
-- Create `app.js`, `app.json`, `app.wxss`: mini program bootstrap, routing, and global styles.
+- Modify `project.config.json`: WeChat Developer Tools project configuration, preserving the existing AppID.
+- Create `miniprogram/app.js`, `miniprogram/app.json`, `miniprogram/app.wxss`: mini program bootstrap, routing, and global styles under `miniprogramRoot`.
+- Create `docs/ui/apple-style-guide.md`: UI principles, layout rules, colors, typography, and component states for this mini program.
+- Create `miniprogram/styles/design-tokens.wxss`: Apple-inspired global CSS variables and utility classes for WeChat Mini Program pages.
 - Create `sitemap.json`: WeChat mini program sitemap config.
 - Create `cloudfunctions/login/index.js`: returns current `openid` and whitelist status.
 - Create `cloudfunctions/bootstrap/index.js`: initializes built-in categories and default settings.
@@ -50,16 +53,231 @@
 
 ---
 
+### Task 0: Apple-Inspired UI Structure And Visual System
+
+**Files:**
+- Create: `docs/ui/apple-style-guide.md`
+- Create: `miniprogram/styles/design-tokens.wxss`
+
+**Interfaces:**
+- Produces: visual rules that all page and component tasks must follow.
+- Produces: reusable WXSS variables/classes imported by `miniprogram/app.wxss`.
+- Produces: status color names for `active`, `due_soon`, `overdue_pending`, `redeemed`, and `cancelled`.
+
+- [ ] **Step 1: Write UI style guide**
+
+Write `docs/ui/apple-style-guide.md`:
+
+```markdown
+# Apple-Inspired UI Style Guide
+
+## Direction
+
+The mini program should feel like a quiet iOS finance utility: clear hierarchy, high readability, restrained surfaces, and native-feeling interactions. It should prioritize repeated daily use over visual decoration.
+
+## Information Architecture
+
+- Home answers: how much money is total, invested, idle, and approaching action.
+- Projects answers: what projects exist, which need attention, and what each one earns.
+- Project form answers: what needs to be recorded now, with redeemed fields shown only when confirming arrival.
+- Stats answers: what was earned this year, by month, category, reward type, and registrant.
+
+## Layout
+
+- Use a `page` wrapper with 32rpx horizontal padding and 24rpx vertical padding.
+- Use 8rpx corner radius for cards, inputs, buttons, and status labels.
+- Use white grouped surfaces on a light system background.
+- Do not nest cards inside cards.
+- Keep dashboard metrics in a two-column grid on normal mobile widths.
+- Put action-needed sections below metrics, not above them.
+
+## Typography
+
+- Use system font stack: `-apple-system`, `BlinkMacSystemFont`, `"SF Pro Text"`, `"Helvetica Neue"`, `Arial`, sans-serif.
+- Page titles use 44rpx, weight 700.
+- Section titles use 32rpx, weight 700.
+- Primary metric numbers use 40rpx, weight 700.
+- Body text uses 28rpx.
+- Supporting text uses 24rpx and muted color.
+- Letter spacing is 0.
+
+## Color
+
+- System background: `#F5F5F7`.
+- Grouped card background: `#FFFFFF`.
+- Primary text: `#1D1D1F`.
+- Secondary text: `#6E6E73`.
+- Separator: `#E5E5EA`.
+- Accent: `#007AFF`.
+- Success/redeemed: `#34C759`.
+- Warning/due soon: `#FF9500`.
+- Danger/overdue: `#FF3B30`.
+- Cancelled/neutral: `#8E8E93`.
+
+## Components
+
+- Metric card: label, large numeric value, optional hint. It must not contain paragraphs.
+- Project card: title, status label, principal, date range, expected return, actual annualized return.
+- Status label: compact rounded label with one of the status colors.
+- Primary button: filled accent background, white text, 88rpx height.
+- Secondary button: white background, accent text, 1rpx separator border.
+- Inputs: grouped white field, 88rpx minimum height, 28rpx text, clear placeholder.
+
+## States
+
+- Loading: show skeleton-like empty surfaces or short loading text; keep layout dimensions stable.
+- Empty: one concise sentence and one relevant action button.
+- Error: concise message, no stack traces.
+- Auth denied: centered title and short explanation.
+
+## Status Labels
+
+- `active`: accent blue, text `进行中`.
+- `due_soon`: warning orange, text `即将到期`.
+- `overdue_pending`: danger red, text `待确认`.
+- `redeemed`: success green, text `已到账`.
+- `cancelled`: neutral gray, text `已取消`.
+```
+
+- [ ] **Step 2: Create global design tokens**
+
+Write `miniprogram/styles/design-tokens.wxss`:
+
+```css
+page {
+  --color-system-background: #f5f5f7;
+  --color-grouped-background: #ffffff;
+  --color-primary-text: #1d1d1f;
+  --color-secondary-text: #6e6e73;
+  --color-tertiary-text: #8e8e93;
+  --color-separator: #e5e5ea;
+  --color-accent: #007aff;
+  --color-success: #34c759;
+  --color-warning: #ff9500;
+  --color-danger: #ff3b30;
+  --radius-card: 8rpx;
+  --space-page-x: 32rpx;
+  --space-page-y: 24rpx;
+  --space-section: 32rpx;
+  --font-title: 44rpx;
+  --font-section: 32rpx;
+  --font-metric: 40rpx;
+  --font-body: 28rpx;
+  --font-caption: 24rpx;
+}
+
+.page {
+  min-height: 100vh;
+  padding: var(--space-page-y) var(--space-page-x);
+  background: var(--color-system-background);
+  box-sizing: border-box;
+  color: var(--color-primary-text);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+  letter-spacing: 0;
+}
+
+.surface {
+  border-radius: var(--radius-card);
+  background: var(--color-grouped-background);
+}
+
+.section-title {
+  color: var(--color-primary-text);
+  font-size: var(--font-section);
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.caption {
+  color: var(--color-secondary-text);
+  font-size: var(--font-caption);
+  line-height: 1.4;
+}
+
+.primary-button {
+  height: 88rpx;
+  border-radius: var(--radius-card);
+  background: var(--color-accent);
+  color: #ffffff;
+  font-size: var(--font-body);
+  font-weight: 600;
+  line-height: 88rpx;
+}
+
+.secondary-button {
+  height: 88rpx;
+  border: 1rpx solid var(--color-separator);
+  border-radius: var(--radius-card);
+  background: var(--color-grouped-background);
+  color: var(--color-accent);
+  font-size: var(--font-body);
+  font-weight: 600;
+  line-height: 88rpx;
+}
+
+.status-label {
+  min-width: 112rpx;
+  padding: 8rpx 12rpx;
+  border-radius: var(--radius-card);
+  box-sizing: border-box;
+  color: #ffffff;
+  font-size: 22rpx;
+  font-weight: 600;
+  line-height: 1.2;
+  text-align: center;
+}
+
+.status-active {
+  background: var(--color-accent);
+}
+
+.status-due-soon {
+  background: var(--color-warning);
+}
+
+.status-overdue {
+  background: var(--color-danger);
+}
+
+.status-redeemed {
+  background: var(--color-success);
+}
+
+.status-cancelled {
+  background: var(--color-tertiary-text);
+}
+```
+
+- [ ] **Step 3: Verify UI direction before implementation**
+
+Check the style guide and token file before Task 1.
+
+Expected:
+- The style guide explicitly says the app is a quiet iOS-style finance utility.
+- The token file includes system background, grouped background, primary text, secondary text, accent, success, warning, danger, and neutral status colors.
+- No gradients, decorative blobs, hero sections, or marketing-style layouts are introduced.
+
+- [ ] **Step 4: Commit**
+
+Run:
+
+```bash
+git add docs/ui/apple-style-guide.md miniprogram/styles/design-tokens.wxss docs/superpowers/plans/2026-07-21-family-finance-projects.md
+git commit -m "docs: add apple-inspired ui system plan"
+```
+
+Expected: commit succeeds.
+
+---
+
 ### Task 1: Mini Program And Cloud Development Scaffold
 
 **Files:**
-- Create: `project.config.json`
-- Create: `app.js`
-- Create: `app.json`
-- Create: `app.wxss`
-- Create: `sitemap.json`
+- Modify: `project.config.json`
+- Create: `miniprogram/app.js`
 - Create: `miniprogram/app.json`
 - Create: `miniprogram/app.wxss`
+- Create: `sitemap.json`
 - Create: `miniprogram/pages/home/home.js`
 - Create: `miniprogram/pages/home/home.json`
 - Create: `miniprogram/pages/home/home.wxml`
@@ -68,17 +286,16 @@
 - Create: `cloudfunctions/bootstrap/package.json`
 
 **Interfaces:**
-- Produces: `wx.cloud.init({ traceUser: true })` in `app.js`, using the default cloud environment selected in WeChat Developer Tools.
+- Produces: `wx.cloud.init({ traceUser: true })` in `miniprogram/app.js`, using the default cloud environment selected in WeChat Developer Tools.
 - Produces: page routes `pages/home/home`, `pages/projects/projects`, `pages/stats/stats`.
 - Produces: cloud function `bootstrap` with input `{}` and output `{ ok: true, categoriesInserted: number, settingsReady: true }`.
 
 - [ ] **Step 1: Create WeChat project config**
 
-Write `project.config.json`:
+Update `project.config.json` without changing the existing `appid`:
 
 ```json
 {
-  "description": "家庭理财项目状态与收益台账",
   "setting": {
     "urlCheck": true,
     "es6": true,
@@ -87,8 +304,7 @@ Write `project.config.json`:
     "enhance": true
   },
   "compileType": "miniprogram",
-  "libVersion": "latest",
-  "appid": "touristappid",
+  "appid": "wxcabf6afa48b9277d",
   "projectname": "yangmao",
   "miniprogramRoot": "miniprogram/",
   "cloudfunctionRoot": "cloudfunctions/",
@@ -98,7 +314,7 @@ Write `project.config.json`:
 
 - [ ] **Step 2: Create app bootstrap**
 
-Write root `app.js`:
+Write `miniprogram/app.js`:
 
 ```js
 App({
@@ -121,7 +337,7 @@ App({
 });
 ```
 
-Write root `app.json`:
+Write `miniprogram/app.json`:
 
 ```json
 {
@@ -134,13 +350,13 @@ Write root `app.json`:
   ],
   "window": {
     "navigationBarTitleText": "家庭理财",
-    "navigationBarBackgroundColor": "#0F766E",
-    "navigationBarTextStyle": "white",
-    "backgroundColor": "#F6F7F9"
+    "navigationBarBackgroundColor": "#F5F5F7",
+    "navigationBarTextStyle": "black",
+    "backgroundColor": "#F5F5F7"
   },
   "tabBar": {
     "color": "#667085",
-    "selectedColor": "#0F766E",
+    "selectedColor": "#007AFF",
     "backgroundColor": "#FFFFFF",
     "borderStyle": "black",
     "list": [
@@ -163,19 +379,14 @@ Write root `app.json`:
 }
 ```
 
-Write root `app.wxss`:
+Write `miniprogram/app.wxss`:
 
 ```css
-page {
-  background: #f6f7f9;
-  color: #1f2937;
-  font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
-}
+@import "./styles/design-tokens.wxss";
 
-.page {
-  min-height: 100vh;
-  padding: 24rpx;
-  box-sizing: border-box;
+page {
+  background: var(--color-system-background);
+  color: var(--color-primary-text);
 }
 ```
 
@@ -192,11 +403,7 @@ Write `sitemap.json`:
 }
 ```
 
-- [ ] **Step 3: Mirror app config under miniprogram root if required by tooling**
-
-Copy the same `app.json` and `app.wxss` content to `miniprogram/app.json` and `miniprogram/app.wxss` if WeChat Developer Tools reports that root app files are not detected under `miniprogramRoot`.
-
-- [ ] **Step 4: Add a minimal home page**
+- [ ] **Step 3: Add a minimal home page**
 
 Write `miniprogram/pages/home/home.json`:
 
@@ -239,7 +446,7 @@ Page({
 });
 ```
 
-- [ ] **Step 5: Create bootstrap cloud function**
+- [ ] **Step 4: Create bootstrap cloud function**
 
 Write `cloudfunctions/bootstrap/package.json`:
 
@@ -318,18 +525,18 @@ exports.main = async () => {
 };
 ```
 
-- [ ] **Step 6: Verify scaffold in WeChat Developer Tools**
+- [ ] **Step 5: Verify scaffold in WeChat Developer Tools**
 
 Open `/Users/benzou/QA/yangmao` in WeChat Developer Tools, enable cloud development, create an environment, select that environment as the default cloud environment for the project, upload/deploy `bootstrap`, run it once, and verify these collections exist: `categories`, `settings`.
 
 Expected: the home page renders and `categories` contains the built-in category `羊毛`.
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 6: Commit**
 
 Run:
 
 ```bash
-git add project.config.json app.js app.json app.wxss sitemap.json miniprogram cloudfunctions/bootstrap
+git add project.config.json sitemap.json miniprogram cloudfunctions/bootstrap
 git commit -m "chore: scaffold wechat cloud mini program"
 ```
 
