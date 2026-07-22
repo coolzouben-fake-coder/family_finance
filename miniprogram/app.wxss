@@ -1,0 +1,6 @@
+@import "./styles/design-tokens.wxss";
+
+page {
+  background: var(--color-system-background);
+  color: var(--color-primary-text);
+}
