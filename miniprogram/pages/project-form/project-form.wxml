@@ -11,8 +11,8 @@
   <view wx:if="{{projectId && !isLocked}}" class="redeem surface">
     <view class="section-title">确认到账</view>
     <input class="field" placeholder="到账日期 YYYY-MM-DD" value="{{redeemForm.redeemDate}}" data-field="redeemDate" bindinput="onRedeemInput" />
-    <input class="field" type="digit" placeholder="实际利息" value="{{redeemForm.actualInterest}}" data-field="actualInterest" bindinput="onRedeemInput" />
-    <input class="field" type="digit" placeholder="实际固定奖励" value="{{redeemForm.actualFixedReward}}" data-field="actualFixedReward" bindinput="onRedeemInput" />
+    <input class="field" type="text" placeholder="实际利息" value="{{redeemForm.actualInterest}}" data-field="actualInterest" bindinput="onRedeemInput" />
+    <input class="field" type="text" placeholder="实际固定奖励" value="{{redeemForm.actualFixedReward}}" data-field="actualFixedReward" bindinput="onRedeemInput" />
     <button class="secondary-button" loading="{{redeeming}}" bindtap="redeem">确认到账</button>
   </view>
   <view wx:if="{{isLocked}}" class="redeemed-note surface caption">{{lockedMessage}}</view>

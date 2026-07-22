@@ -65,3 +65,14 @@
 - `cloudfunctions/projects/index.js`
 - `cloudfunctions/projects/index.test.js`
 - `.superpowers/sdd/task-5-report.md`
+
+### Remaining Review Fix
+
+- Changed the redemption actual interest and actual fixed reward inputs from `type="digit"` to `type="text"` so signed decimal values can be entered; server-side signed validation remains unchanged.
+
+### Verification
+
+- `npm test -- cloudfunctions/projects/index.test.js --runInBand`: passed, 1 suite and 8 tests.
+- `npm test -- --runInBand`: passed, 6 suites and 44 tests.
+- WXML signed-decimal input assertion: passed.
+- `git diff --check`: passed.
