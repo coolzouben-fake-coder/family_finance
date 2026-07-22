@@ -16,7 +16,7 @@
   <view class="section">
     <view class="section-title">已到期待确认</view>
     <view wx:if="{{overdueProjects.length === 0}}" class="empty">暂无需要确认的项目</view>
-    <view wx:for="{{overdueProjects}}" wx:key="_id" class="reminder">
+    <view wx:for="{{overdueProjects}}" wx:key="_id" class="reminder reminder--overdue">
       <text>{{item.name}}</text>
       <text>{{item.displayAmount}}</text>
     </view>
@@ -25,7 +25,7 @@
   <view class="section">
     <view class="section-title">即将到期</view>
     <view wx:if="{{dueSoonProjects.length === 0}}" class="empty">暂无即将到期项目</view>
-    <view wx:for="{{dueSoonProjects}}" wx:key="_id" class="reminder">
+    <view wx:for="{{dueSoonProjects}}" wx:key="_id" class="reminder reminder--due-soon">
       <text>{{item.name}}</text>
       <text>{{item.endDate}}</text>
     </view>

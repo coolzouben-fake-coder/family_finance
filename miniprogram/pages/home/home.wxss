@@ -50,3 +50,11 @@
   color: var(--color-primary-text);
   font-size: var(--font-caption);
 }
+
+.reminder--due-soon {
+  border-left: 6rpx solid var(--color-warning);
+}
+
+.reminder--overdue {
+  border-left: 6rpx solid var(--color-danger);
+}

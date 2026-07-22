@@ -1,6 +1,8 @@
 const mockEnsureAllowedSession = jest.fn();
 const mockGetAssets = jest.fn();
 const mockListProjects = jest.fn();
+const fs = require('fs');
+const path = require('path');
 
 jest.mock('../services/session', () => ({ ensureAllowedSession: mockEnsureAllowedSession }));
 jest.mock('../services/cloud', () => ({ getAssets: mockGetAssets, listProjects: mockListProjects }));
@@ -62,5 +64,17 @@ describe('home dashboard', () => {
     });
     expect(page.data.dueSoonProjects.map((project) => project._id)).toEqual(['due']);
     expect(page.data.overdueProjects.map((project) => project._id)).toEqual(['overdue']);
+  });
+
+  test('uses distinct warning and danger accents for reminder states', () => {
+    const markup = fs.readFileSync(path.join(__dirname, '../pages/home/home.wxml'), 'utf8');
+    const styles = fs.readFileSync(path.join(__dirname, '../pages/home/home.wxss'), 'utf8');
+
+    expect(markup).toContain('class="reminder reminder--overdue"');
+    expect(markup).toContain('class="reminder reminder--due-soon"');
+    expect(styles).toContain('.reminder--overdue');
+    expect(styles).toContain('border-left: 6rpx solid var(--color-danger)');
+    expect(styles).toContain('.reminder--due-soon');
+    expect(styles).toContain('border-left: 6rpx solid var(--color-warning)');
   });
 });
