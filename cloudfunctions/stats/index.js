@@ -4,6 +4,7 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 
 const db = cloud.database();
 const MAX_ENABLED_USERS = 2;
+const PROJECT_QUERY_BATCH_SIZE = 20;
 
 function daysInclusive(startDate, endDate) {
   const [sy, sm, sd] = startDate.split('-').map(Number);
@@ -23,6 +24,25 @@ async function requireAllowed(openid) {
   if (!result.data.some((user) => user.openid === openid)) throw new Error('AUTH_DENIED');
 }
 
+async function listRedeemedProjects(start, end) {
+  const projects = [];
+  let offset = 0;
+
+  while (true) {
+    const result = await db.collection('projects')
+      .where({
+        manualStatus: 'redeemed',
+        redeemDate: db.command.gte(start).and(db.command.lte(end))
+      })
+      .skip(offset)
+      .limit(PROJECT_QUERY_BATCH_SIZE)
+      .get();
+    projects.push(...result.data);
+    if (result.data.length < PROJECT_QUERY_BATCH_SIZE) return projects;
+    offset += result.data.length;
+  }
+}
+
 exports.main = async (event = {}) => {
   const wxContext = cloud.getWXContext();
   await requireAllowed(wxContext.OPENID);
@@ -32,12 +52,7 @@ exports.main = async (event = {}) => {
   const start = `${year}-01-01`;
   const end = `${year}-12-31`;
 
-  const result = await db.collection('projects')
-    .where({
-      manualStatus: 'redeemed',
-      redeemDate: db.command.gte(start).and(db.command.lte(end))
-    })
-    .get();
+  const projects = await listRedeemedProjects(start, end);
 
   const monthly = {};
   const byRegistrant = {};
@@ -45,7 +60,7 @@ exports.main = async (event = {}) => {
   let totalFixedReward = 0;
   let weightedPrincipalDays = 0;
 
-  result.data.forEach((project) => {
+  projects.forEach((project) => {
     const month = project.redeemDate.slice(0, 7);
     const projectReturn = actualTotal(project);
     const holdingDays = daysInclusive(project.startDate, project.redeemDate);

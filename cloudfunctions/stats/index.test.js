@@ -45,12 +45,23 @@ function matches(document, filters) {
 function createCollection(name) {
   return {
     where(filters) {
+      let offset = 0;
+      let max = 20;
       const query = {
-        limit() {
+        skip(value) {
+          offset = value;
+          return query;
+        },
+        limit(value) {
+          max = value;
           return query;
         },
         async get() {
-          return { data: documents[name].filter((document) => matches(document, filters)) };
+          return {
+            data: documents[name]
+              .filter((document) => matches(document, filters))
+              .slice(offset, offset + max)
+          };
         }
       };
       return query;
@@ -104,6 +115,44 @@ test('calculates annual statistics using inclusive holding days', async () => {
         principal: 10000,
         actualTotalReturn: 223.01
       }]
+    }
+  });
+});
+
+test('includes redeemed projects from every annual statistics query page', async () => {
+  documents.projects = Array.from({ length: 21 }, (_, index) => ({
+    _id: `project-${index + 1}`,
+    registrantOpenid: index < 20 ? 'allowed-openid' : 'other-openid',
+    manualStatus: 'redeemed',
+    principal: 100,
+    startDate: '2026-01-01',
+    redeemDate: '2026-01-01',
+    actualInterest: 10,
+    actualFixedReward: 5
+  }));
+
+  await expect(main({ action: 'annual', year: 2026 })).resolves.toEqual({
+    ok: true,
+    stats: {
+      year: 2026,
+      totalReturn: 315,
+      annualizedRate: 54.75,
+      fixedRewardShare: expect.closeTo(1 / 3, 10),
+      monthly: [{ month: '2026-01', amount: 315 }],
+      byRegistrant: [
+        {
+          registrantOpenid: 'allowed-openid',
+          projectCount: 20,
+          principal: 2000,
+          actualTotalReturn: 300
+        },
+        {
+          registrantOpenid: 'other-openid',
+          projectCount: 1,
+          principal: 100,
+          actualTotalReturn: 15
+        }
+      ]
     }
   });
 });
