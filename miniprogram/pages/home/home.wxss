@@ -55,12 +55,15 @@
   background: transparent;
   color: var(--color-secondary-text);
   font-size: var(--font-caption);
+  font-weight: 500;
   line-height: 64rpx;
 }
 
 .asset-type-button--active {
-  background: var(--color-surface);
-  color: var(--color-primary-text);
+  background: var(--color-accent);
+  color: #FFFFFF;
+  font-weight: 700;
+  box-shadow: 0 8rpx 18rpx rgba(0, 122, 255, 0.22);
 }
 
 .asset-field {

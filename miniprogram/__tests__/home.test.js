@@ -132,6 +132,16 @@ describe('home dashboard', () => {
     expect(styles).toContain('border-left: 6rpx solid var(--color-warning)');
   });
 
+  test('uses a prominent selected style for asset change type buttons', () => {
+    const styles = fs.readFileSync(path.join(__dirname, '../pages/home/home.wxss'), 'utf8');
+
+    expect(styles).toContain('.asset-type-button--active');
+    expect(styles).toContain('background: var(--color-accent)');
+    expect(styles).toContain('color: #FFFFFF');
+    expect(styles).toContain('font-weight: 700');
+    expect(styles).toContain('box-shadow: 0 8rpx 18rpx rgba(0, 122, 255, 0.22)');
+  });
+
   test('records a deposit from the dashboard with a required reason', async () => {
     const page = createHomePage();
     page.data.totalAssetsValue = 50000;
