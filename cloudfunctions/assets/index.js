@@ -16,7 +16,11 @@ async function requireAllowed(openid) {
 }
 
 function isMissingDocumentError(error) {
-  return error && error.errCode === 'DATABASE_DOCUMENT_NOT_EXIST';
+  if (!error) return false;
+  if (error.errCode === 'DATABASE_DOCUMENT_NOT_EXIST') return true;
+
+  const message = String(error.message || error.errMsg || '');
+  return message.includes('document.get:fail') && message.includes('does not exist');
 }
 
 function normalizeReason(reason) {

@@ -18,7 +18,13 @@ function daysUntil(endDate, today) {
 
 function getDateStatus(project, today, dueSoonDays = 3) {
   if (project.manualStatus === 'cancelled') return 'cancelled';
-  if (project.manualStatus === 'redeemed') return 'redeemed';
+  const principalStatus = project.principalStatus || (project.manualStatus === 'redeemed' ? 'released' : 'holding');
+  const rewardStatus = project.rewardStatus || (
+    project.manualStatus === 'redeemed' || project.returnStatus === 'received' ? 'received' : 'pending'
+  );
+
+  if (principalStatus === 'released' && rewardStatus === 'received') return 'redeemed';
+  if (principalStatus === 'released') return 'overdue_pending';
 
   if (today < project.startDate) return 'not_started';
   if (today > project.endDate) return 'overdue_pending';

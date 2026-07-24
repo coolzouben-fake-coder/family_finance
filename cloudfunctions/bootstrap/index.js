@@ -5,13 +5,13 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 const db = cloud.database();
 
 const BUILTIN_CATEGORIES = [
+  { id: 'builtin-yangmao', name: '羊毛' },
   { id: 'builtin-bank-finance', name: '银行理财' },
   { id: 'builtin-fixed-deposit', name: '定期存款' },
   { id: 'builtin-fund', name: '基金' },
   { id: 'builtin-bond', name: '债券' },
   { id: 'builtin-brokerage', name: '券商理财' },
   { id: 'builtin-money-fund', name: '货币基金' },
-  { id: 'builtin-yangmao', name: '羊毛' },
   { id: 'builtin-promo-reward', name: '活动奖励' },
   { id: 'builtin-other', name: '其他' }
 ];

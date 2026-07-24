@@ -1,5 +1,5 @@
-.filters { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12rpx; margin-top: 20rpx; }
-.filter-control { min-height: 68rpx; padding: 0 16rpx; border: 1rpx solid var(--color-separator); border-radius: var(--radius-card); background: var(--color-grouped-background); color: var(--color-primary-text); font-size: var(--font-caption); line-height: 68rpx; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.filters { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12rpx; margin-top: 20rpx; background: transparent; }
+.filter-control { min-height: 72rpx; padding: 0 16rpx; border-radius: 8rpx; background: var(--weui-BG-2); color: var(--color-primary-text); font-size: var(--font-caption); line-height: 72rpx; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .list { display: flex; flex-direction: column; gap: 16rpx; margin-top: 24rpx; }
 .empty, .error-state { margin-top: var(--space-section); padding: 32rpx; text-align: center; }
 .empty-title { margin-bottom: 12rpx; color: var(--color-primary-text); font-size: var(--font-section); font-weight: 700; }

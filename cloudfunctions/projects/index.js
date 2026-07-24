@@ -64,12 +64,19 @@ function validateBaseProject(data) {
   const principal = numberInRange(data.principal, 'PRINCIPAL_INVALID', 0.01, 1000000000000);
   if (!isValidDate(data.startDate) || !isValidDate(data.endDate)) throw new Error('DATE_REQUIRED');
   if (data.endDate < data.startDate) throw new Error('END_DATE_INVALID');
+  const expectedReturnMode = data.expectedReturnMode === 'fixedReturn' ? 'fixedReturn' : 'annualRate';
   const expectedAnnualRate = numberInRange(data.expectedAnnualRate === undefined || data.expectedAnnualRate === '' ? 0 : data.expectedAnnualRate, 'EXPECTED_ANNUAL_RATE_INVALID', 0, 1);
+  const expectedFixedReturn = optionalMoney(data.expectedFixedReturn, 'EXPECTED_FIXED_RETURN_INVALID');
+  if (expectedReturnMode === 'annualRate' && expectedFixedReturn > 0) throw new Error('EXPECTED_RETURN_MODE_CONFLICT');
+  if (expectedReturnMode === 'fixedReturn' && expectedAnnualRate > 0) throw new Error('EXPECTED_RETURN_MODE_CONFLICT');
   const fixedReward = optionalMoney(data.fixedReward, 'FIXED_REWARD_INVALID');
   if (data.remark !== undefined && (typeof data.remark !== 'string' || data.remark.length > 1000)) throw new Error('REMARK_INVALID');
   return {
     name: data.name.trim(), categoryId: data.categoryId, principal, startDate: data.startDate, endDate: data.endDate,
-    expectedAnnualRate, fixedReward, remark: data.remark || ''
+    expectedReturnMode,
+    expectedAnnualRate: expectedReturnMode === 'annualRate' ? expectedAnnualRate : 0,
+    expectedFixedReturn: expectedReturnMode === 'fixedReturn' ? expectedFixedReturn : 0,
+    fixedReward, remark: data.remark || ''
   };
 }
 
@@ -119,8 +126,12 @@ async function createProject(openid, data, enabledUsers) {
   const now = db.serverDate();
   const payload = {
     ...project, registrantOpenid: selectRegistrant(data.registrantOpenid, openid, enabledUsers),
-    expectedInterest: calculateExpectedInterest(project.principal, project.expectedAnnualRate, project.startDate, project.endDate),
-    actualInterest: 0, actualFixedReward: 0, redeemDate: '', manualStatus: 'active', createdAt: now, updatedAt: now
+    expectedInterest: project.expectedReturnMode === 'fixedReturn'
+      ? project.expectedFixedReturn
+      : calculateExpectedInterest(project.principal, project.expectedAnnualRate, project.startDate, project.endDate),
+    actualInterest: 0, actualFixedReward: 0,
+    principalStatus: 'holding', rewardStatus: 'pending', rewardReceivedDate: '',
+    redeemDate: '', manualStatus: 'active', createdAt: now, updatedAt: now
   };
   const result = await db.collection('projects').add({ data: payload });
   return { _id: result._id, ...payload };
@@ -131,13 +142,34 @@ async function updateProject(id, data, enabledUsers) {
   throw new Error('PROJECT_BASE_LOCKED');
 }
 
-function validateRedemption(project, data) {
+function validateRewardReceived(project, data) {
+  if (!data || !isValidDate(data.rewardReceivedDate)) throw new Error('REWARD_RECEIVED_DATE_REQUIRED');
+  if (data.rewardReceivedDate < project.startDate) throw new Error('REWARD_RECEIVED_DATE_INVALID');
+  return {
+    actualFixedReward: optionalActualReturn(data.actualFixedReward, 'ACTUAL_FIXED_REWARD_INVALID'),
+    rewardReceivedDate: data.rewardReceivedDate,
+    rewardStatus: 'received'
+  };
+}
+
+function validatePrincipalRedeemed(project, data) {
   if (!data || !isValidDate(data.redeemDate)) throw new Error('REDEEM_DATE_REQUIRED');
   if (data.redeemDate < project.startDate) throw new Error('REDEEM_DATE_INVALID');
   return {
     actualInterest: optionalActualReturn(data.actualInterest, 'ACTUAL_INTEREST_INVALID'),
-    actualFixedReward: optionalActualReturn(data.actualFixedReward, 'ACTUAL_FIXED_REWARD_INVALID'),
-    redeemDate: data.redeemDate, manualStatus: 'redeemed', updatedAt: db.serverDate()
+    redeemDate: data.redeemDate,
+    principalStatus: 'released'
+  };
+}
+
+function validateRedemption(project, data) {
+  return {
+    ...validatePrincipalRedeemed(project, data),
+    ...validateRewardReceived(project, {
+      rewardReceivedDate: data.rewardReceivedDate || data.returnReceivedDate || data.redeemDate,
+      actualFixedReward: data.actualFixedReward
+    }),
+    manualStatus: 'redeemed', updatedAt: db.serverDate()
   };
 }
 
@@ -145,6 +177,33 @@ async function redeemProject(id, data) {
   const project = await getProject(id);
   if (project.manualStatus !== 'active') throw new Error('PROJECT_NOT_ACTIVE');
   const payload = validateRedemption(project, data);
+  await db.collection('projects').doc(id).update({ data: payload });
+  return { _id: id, ...project, ...payload };
+}
+
+function completionManualStatus(payload, project) {
+  const principalStatus = payload.principalStatus || project.principalStatus || (project.manualStatus === 'redeemed' ? 'released' : 'holding');
+  const rewardStatus = payload.rewardStatus || project.rewardStatus || (project.manualStatus === 'redeemed' ? 'received' : 'pending');
+  return principalStatus === 'released' && rewardStatus === 'received' ? 'redeemed' : 'active';
+}
+
+async function receiveReward(id, data) {
+  const project = await getProject(id);
+  if (project.manualStatus === 'cancelled') throw new Error('PROJECT_CANCELLED');
+  if ((project.rewardStatus || (project.manualStatus === 'redeemed' ? 'received' : 'pending')) === 'received') throw new Error('PROJECT_REWARD_ALREADY_RECEIVED');
+  const payload = { ...validateRewardReceived(project, data), updatedAt: db.serverDate() };
+  payload.manualStatus = completionManualStatus(payload, project);
+  await db.collection('projects').doc(id).update({ data: payload });
+  return { _id: id, ...project, ...payload };
+}
+
+async function redeemPrincipal(id, data) {
+  const project = await getProject(id);
+  if (project.manualStatus === 'cancelled') throw new Error('PROJECT_CANCELLED');
+  if ((project.principalStatus || (project.manualStatus === 'redeemed' ? 'released' : 'holding')) === 'released') throw new Error('PROJECT_PRINCIPAL_ALREADY_RELEASED');
+  const payload = { ...validatePrincipalRedeemed(project, data), updatedAt: db.serverDate() };
+  payload.manualStatus = completionManualStatus(payload, project);
+
   await db.collection('projects').doc(id).update({ data: payload });
   return { _id: id, ...project, ...payload };
 }
@@ -164,7 +223,8 @@ async function cancelProject(id) {
 }
 
 async function removeProject(id) {
-  await getProject(id);
+  const project = await getProject(id);
+  if (project.manualStatus === 'redeemed') throw new Error('PROJECT_REDEEMED_REMOVE_FORBIDDEN');
   await db.collection('projects').doc(id).remove();
 }
 
@@ -177,6 +237,12 @@ exports.main = async (event = {}) => {
   if (event.action === 'create') return { ok: true, project: await createProject(openid, event.project, enabledUsers) };
   if (event.action === 'update') return { ok: true, project: await updateProject(event.id, event.project, enabledUsers) };
   if (event.action === 'redeem') return { ok: true, project: await redeemProject(event.id, event.redeemData) };
+  if (event.action === 'receiveReward') return { ok: true, project: await receiveReward(event.id, event.rewardData) };
+  if (event.action === 'receiveReturn') return { ok: true, project: await receiveReward(event.id, {
+    rewardReceivedDate: event.returnData && (event.returnData.rewardReceivedDate || event.returnData.returnReceivedDate),
+    actualFixedReward: event.returnData && event.returnData.actualFixedReward
+  }) };
+  if (event.action === 'redeemPrincipal') return { ok: true, project: await redeemPrincipal(event.id, event.redeemData) };
   if (event.action === 'correctRedemption') return { ok: true, project: await correctRedemption(event.id, event.redeemData) };
   if (event.action === 'cancel') { await cancelProject(event.id); return { ok: true }; }
   if (event.action === 'remove') { await removeProject(event.id); return { ok: true }; }

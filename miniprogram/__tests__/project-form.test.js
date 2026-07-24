@@ -2,6 +2,9 @@ const mockEnsureAllowedSession = jest.fn();
 const mockCreateProject = jest.fn();
 const mockUpdateProject = jest.fn();
 const mockRedeemProject = jest.fn();
+const mockReceiveReturnProject = jest.fn();
+const mockReceiveRewardProject = jest.fn();
+const mockRedeemPrincipalProject = jest.fn();
 const mockCorrectRedemption = jest.fn();
 const mockRemoveProject = jest.fn();
 const mockListCategories = jest.fn();
@@ -13,6 +16,9 @@ jest.mock('../services/cloud', () => ({
   createProject: mockCreateProject,
   updateProject: mockUpdateProject,
   redeemProject: mockRedeemProject,
+  receiveReturnProject: mockReceiveReturnProject,
+  receiveRewardProject: mockReceiveRewardProject,
+  redeemPrincipalProject: mockRedeemPrincipalProject,
   correctRedemption: mockCorrectRedemption,
   removeProject: mockRemoveProject,
   listCategories: mockListCategories,
@@ -43,11 +49,17 @@ function createProjectFormPage(form) {
   page.save = pageDefinition.save.bind(page);
   page.onLoad = pageDefinition.onLoad.bind(page);
   page.redeem = pageDefinition.redeem.bind(page);
+  if (pageDefinition.receiveReturn) page.receiveReturn = pageDefinition.receiveReturn.bind(page);
+  if (pageDefinition.receiveReward) page.receiveReward = pageDefinition.receiveReward.bind(page);
+  if (pageDefinition.redeemPrincipal) page.redeemPrincipal = pageDefinition.redeemPrincipal.bind(page);
+  if (pageDefinition.onExpectedReturnModeChange) page.onExpectedReturnModeChange = pageDefinition.onExpectedReturnModeChange.bind(page);
   if (pageDefinition.remove) page.remove = pageDefinition.remove.bind(page);
   if (pageDefinition.onDateChange) page.onDateChange = pageDefinition.onDateChange.bind(page);
   if (pageDefinition.onStartDateChange) page.onStartDateChange = pageDefinition.onStartDateChange.bind(page);
   if (pageDefinition.onEndDateChange) page.onEndDateChange = pageDefinition.onEndDateChange.bind(page);
   if (pageDefinition.onRedeemDateChange) page.onRedeemDateChange = pageDefinition.onRedeemDateChange.bind(page);
+  if (pageDefinition.onPrincipalDateChange) page.onPrincipalDateChange = pageDefinition.onPrincipalDateChange.bind(page);
+  if (pageDefinition.onRewardDateChange) page.onRewardDateChange = pageDefinition.onRewardDateChange.bind(page);
   return page;
 }
 
@@ -75,6 +87,9 @@ describe('project form', () => {
     mockCreateProject.mockResolvedValue();
     mockUpdateProject.mockResolvedValue();
     mockRedeemProject.mockResolvedValue();
+    mockReceiveReturnProject.mockResolvedValue();
+    mockReceiveRewardProject.mockResolvedValue();
+    mockRedeemPrincipalProject.mockResolvedValue();
     mockCorrectRedemption.mockResolvedValue();
     mockRemoveProject.mockResolvedValue();
     mockListCategories.mockResolvedValue({ categories: [{ _id: 'category', name: '银行理财' }] });
@@ -83,7 +98,12 @@ describe('project form', () => {
       { openid: 'allowed-openid', nickname: '成员一' },
       { openid: 'second-openid', nickname: '成员二' }
     ] });
-    global.wx = { showToast: jest.fn(), navigateBack: jest.fn(), showModal: jest.fn(({ success }) => success({ confirm: true })) };
+    global.wx = {
+      showToast: jest.fn(),
+      navigateBack: jest.fn(),
+      switchTab: jest.fn(),
+      showModal: jest.fn(({ success }) => success({ confirm: true }))
+    };
     global.Page = (definition) => { pageDefinition = definition; };
     require('../pages/project-form/project-form');
   });
@@ -186,6 +206,75 @@ describe('project form', () => {
     expect(page.data.saving).toBe(false);
   });
 
+  test('does not report save failure when fallback navigation is needed after a successful create', async () => {
+    global.wx.navigateBack.mockImplementation(() => { throw new Error('navigateBack failed'); });
+    const page = createProjectFormPage();
+    page.onLoad({});
+    await flushPromises();
+    await flushPromises();
+    page.data.form = {
+      name: '项目', categoryId: 'category', registrantOpenid: 'allowed-openid', principal: '10000',
+      startDate: '2026-07-01', endDate: '2026-07-28', expectedReturnMode: 'annualRate',
+      expectedAnnualRate: '', expectedFixedReturn: '', fixedReward: '', remark: ''
+    };
+
+    page.save();
+    await flushPromises();
+
+    expect(mockCreateProject).toHaveBeenCalledTimes(1);
+    expect(global.wx.switchTab).toHaveBeenCalledWith({ url: '/pages/projects/projects' });
+    expect(global.wx.showToast).not.toHaveBeenCalled();
+  });
+
+  test('submits annual-rate expected return mode with calculated expected interest', async () => {
+    const page = createProjectFormPage();
+    page.onLoad({});
+    await flushPromises();
+    await flushPromises();
+    page.data.form = {
+      name: '年化项目', categoryId: 'category', registrantOpenid: 'allowed-openid', principal: '10000',
+      startDate: '2026-07-01', endDate: '2026-07-28', expectedReturnMode: 'annualRate',
+      expectedAnnualRate: '0.03', expectedFixedReturn: '', fixedReward: '200', remark: ''
+    };
+
+    page.save();
+    await flushPromises();
+
+    expect(mockCreateProject).toHaveBeenCalledWith(expect.objectContaining({
+      expectedReturnMode: 'annualRate',
+      expectedAnnualRate: 0.03,
+      expectedFixedReturn: 0,
+      expectedInterest: 23.01,
+      fixedReward: 200
+    }));
+  });
+
+  test('submits fixed expected return mode and clears annual-rate input', async () => {
+    const page = createProjectFormPage();
+    page.onLoad({});
+    await flushPromises();
+    await flushPromises();
+    page.onExpectedReturnModeChange({ currentTarget: { dataset: { mode: 'fixedReturn' } } });
+    page.data.form = {
+      ...page.data.form,
+      name: '固定收益项目', categoryId: 'category', registrantOpenid: 'allowed-openid', principal: '10000',
+      startDate: '2026-07-01', endDate: '2026-07-28', expectedFixedReturn: '88.8', fixedReward: '12.2', remark: ''
+    };
+
+    page.save();
+    await flushPromises();
+
+    expect(page.data.form.expectedReturnMode).toBe('fixedReturn');
+    expect(page.data.form.expectedAnnualRate).toBe('');
+    expect(mockCreateProject).toHaveBeenCalledWith(expect.objectContaining({
+      expectedReturnMode: 'fixedReturn',
+      expectedAnnualRate: 0,
+      expectedFixedReturn: 88.8,
+      expectedInterest: 88.8,
+      fixedReward: 12.2
+    }));
+  });
+
   test.each([
     [false, mockRedeemProject, mockCorrectRedemption],
     [true, mockCorrectRedemption, mockRedeemProject]
@@ -215,7 +304,7 @@ describe('project form', () => {
 
     expect(markup).toContain('wx:if="{{loading}}"');
     expect(markup).toContain('wx:elif="{{errorMessage}}"');
-    expect(markup).toContain('disabled="{{saving || redeeming || removing}}"');
+    expect(markup).toContain('disabled="{{saving || receivingReturn || redeeming || removing}}"');
   });
 
   test('uses explicit field height to prevent placeholder clipping', () => {
@@ -225,10 +314,16 @@ describe('project form', () => {
     const styles = fs.readFileSync(path.join(__dirname, '../pages/project-form/project-form.wxss'), 'utf8');
 
     expect(markup).toContain('{{startDateText}}');
+    expect(markup).toContain('weui-form');
+    expect(markup).toContain('weui-cell');
+    expect(markup).toContain('weui-input');
+    expect(markup).toContain('data-mode="annualRate"');
+    expect(markup).toContain('data-mode="fixedReturn"');
+    expect(markup).toContain('wx:if="{{isAnnualRateMode}}"');
+    expect(markup).toContain('wx:if="{{isFixedReturnMode}}"');
     expect(markup).not.toContain('class="form-label"');
-    expect(styles).toContain('height: 96rpx');
+    expect(styles).toContain('height: 56rpx');
     expect(styles).toContain('line-height: 56rpx');
-    expect(styles).toContain('padding: 20rpx');
   });
 
   test('renders date pickers and updates selected date values', () => {
@@ -238,11 +333,14 @@ describe('project form', () => {
     page.onStartDateChange({ detail: { value: '2026-07-02' } });
     page.onEndDateChange({ detail: { value: '2026-07-29' } });
     page.onRedeemDateChange({ currentTarget: { dataset: { field: 'redeemDate' } }, detail: { value: '2026-07-30' } });
+    page.onPrincipalDateChange({ detail: { value: '2026-07-31' } });
+    page.onRewardDateChange({ detail: { value: '2026-08-01' } });
 
     expect(markup).toContain('mode="date"');
     expect(markup).toContain('bindchange="onStartDateChange"');
     expect(markup).toContain('bindchange="onEndDateChange"');
-    expect(markup).toContain('bindchange="onRedeemDateChange"');
+    expect(markup).toContain('bindchange="onPrincipalDateChange"');
+    expect(markup).toContain('bindchange="onRewardDateChange"');
     expect(markup).toContain('{{startDateText}}');
     expect(markup).toContain('{{endDateText}}');
     expect(page.data.form.startDate).toBe('2026-07-02');
@@ -250,6 +348,25 @@ describe('project form', () => {
     expect(page.data.startDateText).toBe('2026-07-02');
     expect(page.data.endDateText).toBe('2026-07-29');
     expect(page.data.redeemForm.redeemDate).toBe('2026-07-30');
+    expect(page.data.principalForm.redeemDate).toBe('2026-07-31');
+    expect(page.data.rewardForm.rewardReceivedDate).toBe('2026-08-01');
+  });
+
+  test('renders one settlement section for active project settlement actions', () => {
+    const markup = require('fs').readFileSync(require('path').join(__dirname, '../pages/project-form/project-form.wxml'), 'utf8');
+
+    expect(markup).toContain('到账处理');
+    expect(markup).toContain('本金/利息到账');
+    expect(markup).toContain('奖励到账');
+    expect(markup).toContain('确认本金到账');
+    expect(markup).toContain('确认奖励到账');
+    expect(markup).toContain('bindtap="receiveReward"');
+    expect(markup).toContain('bindtap="redeemPrincipal"');
+    expect(markup).toContain('wx:if="{{!isPrincipalReleased}}"');
+    expect(markup).toContain('wx:if="{{!isRewardReceived}}"');
+    expect(markup).not.toContain('returnForm');
+    expect(markup).not.toContain('onReturnInput');
+    expect(markup).not.toContain('onReturnDateChange');
   });
 
   test('locks existing active projects and exposes delete from the detail form', async () => {
@@ -281,11 +398,12 @@ describe('project form', () => {
     expect(mockUpdateProject).not.toHaveBeenCalled();
   });
 
-  test('deletes an existing project after confirmation', async () => {
+  test('deletes an existing non-redeemed project after confirmation', async () => {
     const page = createProjectFormPage();
     page.data.ready = true;
     page.data.loading = false;
     page.data.projectId = 'project-id';
+    page.data.canRemove = true;
 
     page.remove();
     await flushPromises();
@@ -296,6 +414,38 @@ describe('project form', () => {
     }));
     expect(mockRemoveProject).toHaveBeenCalledWith('project-id');
     expect(global.wx.navigateBack).toHaveBeenCalled();
+  });
+
+  test('does not expose or execute delete for redeemed projects', async () => {
+    mockListProjects.mockResolvedValue({ projects: [{
+      _id: 'redeemed-id',
+      name: '已到账项目',
+      categoryId: 'category',
+      registrantOpenid: 'second-openid',
+      principal: 10000,
+      startDate: '2026-07-01',
+      endDate: '2026-07-28',
+      expectedAnnualRate: 0.03,
+      fixedReward: 100,
+      remark: '',
+      manualStatus: 'redeemed',
+      redeemDate: '2026-07-28',
+      actualInterest: 20,
+      actualFixedReward: 100
+    }] });
+    const markup = require('fs').readFileSync(require('path').join(__dirname, '../pages/project-form/project-form.wxml'), 'utf8');
+    const page = createProjectFormPage();
+
+    page.onLoad({ id: 'redeemed-id' });
+    await flushPromises();
+    await flushPromises();
+    page.remove();
+
+    expect(page.data.isRedeemed).toBe(true);
+    expect(page.data.canRemove).toBe(false);
+    expect(markup).toContain('wx:if="{{projectId && canRemove}}"');
+    expect(mockRemoveProject).not.toHaveBeenCalled();
+    expect(global.wx.showModal).not.toHaveBeenCalled();
   });
 
   test('submits corrections for redeemed projects through the dedicated action', async () => {
@@ -320,13 +470,65 @@ describe('project form', () => {
     page.onLoad({ id: 'redeemed-id' });
     await flushPromises();
     await flushPromises();
-    page.data.redeemForm = { redeemDate: '2026-07-30', actualInterest: '-30', actualFixedReward: '150' };
+    page.data.principalForm = { redeemDate: '2026-07-30', actualInterest: '-30' };
+    page.data.rewardForm = { rewardReceivedDate: '2026-08-01', actualFixedReward: '150' };
     page.redeem();
     await flushPromises();
 
     expect(page.data.isRedeemed).toBe(true);
     expect(mockCorrectRedemption).toHaveBeenCalledWith('redeemed-id', {
-      redeemDate: '2026-07-30', actualInterest: -30, actualFixedReward: 150
+      redeemDate: '2026-07-30', actualInterest: -30, rewardReceivedDate: '2026-08-01', actualFixedReward: 150
+    });
+    expect(mockRedeemProject).not.toHaveBeenCalled();
+  });
+
+  test('receives reward for an active project without redeeming principal', async () => {
+    mockListProjects.mockResolvedValue({ projects: [{
+      _id: 'active-id',
+      name: '进行中项目',
+      categoryId: 'category',
+      registrantOpenid: 'allowed-openid',
+      principal: 10000,
+      startDate: '2026-07-01',
+      endDate: '2026-07-28',
+      expectedAnnualRate: 0.03,
+      fixedReward: 100,
+      remark: '',
+      manualStatus: 'active',
+      principalStatus: 'holding',
+      rewardStatus: 'pending'
+    }] });
+    const page = createProjectFormPage();
+
+    page.onLoad({ id: 'active-id' });
+    await flushPromises();
+    await flushPromises();
+    page.data.rewardForm = { rewardReceivedDate: '2026-07-20', actualFixedReward: '100' };
+    page.receiveReward();
+    await flushPromises();
+
+    expect(mockReceiveRewardProject).toHaveBeenCalledWith('active-id', {
+      rewardReceivedDate: '2026-07-20', actualFixedReward: 100
+    });
+    expect(mockRedeemPrincipalProject).not.toHaveBeenCalled();
+  });
+
+  test('redeems active principal and actual interest through the principal action', async () => {
+    const page = createProjectFormPage();
+    page.data.ready = true;
+    page.data.loading = false;
+    page.data.projectId = 'active-id';
+    page.data.isRedeemed = false;
+    page.data.isPrincipalReleased = false;
+    page.data.isRewardReceived = true;
+    page.data.principalForm = { redeemDate: '2026-07-28', actualInterest: '999' };
+    page.data.rewardForm = { rewardReceivedDate: '2026-07-20', actualFixedReward: '100' };
+
+    page.redeemPrincipal();
+    await flushPromises();
+
+    expect(mockRedeemPrincipalProject).toHaveBeenCalledWith('active-id', {
+      redeemDate: '2026-07-28', actualInterest: 999
     });
     expect(mockRedeemProject).not.toHaveBeenCalled();
   });

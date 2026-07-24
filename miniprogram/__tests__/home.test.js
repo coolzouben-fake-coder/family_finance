@@ -2,7 +2,6 @@ const mockEnsureAllowedSession = jest.fn();
 const mockGetAssets = jest.fn();
 const mockListProjects = jest.fn();
 const mockUpdateAssets = jest.fn();
-const mockListAssetChanges = jest.fn();
 const fs = require('fs');
 const path = require('path');
 
@@ -10,8 +9,7 @@ jest.mock('../services/session', () => ({ ensureAllowedSession: mockEnsureAllowe
 jest.mock('../services/cloud', () => ({
   getAssets: mockGetAssets,
   listProjects: mockListProjects,
-  updateAssets: mockUpdateAssets,
-  listAssetChanges: mockListAssetChanges
+  updateAssets: mockUpdateAssets
 }));
 
 let pageDefinition;
@@ -28,7 +26,7 @@ function createHomePage() {
   page.startAssetEdit = pageDefinition.startAssetEdit.bind(page);
   page.saveAssets = pageDefinition.saveAssets.bind(page);
   page.onAssetTypeChange = pageDefinition.onAssetTypeChange.bind(page);
-  page.toggleAssetChanges = pageDefinition.toggleAssetChanges.bind(page);
+  page.openAssetChanges = pageDefinition.openAssetChanges.bind(page);
   return page;
 }
 
@@ -52,10 +50,6 @@ describe('home dashboard', () => {
     jest.setSystemTime(new Date('2026-07-22T12:00:00'));
     mockEnsureAllowedSession.mockResolvedValue();
     mockGetAssets.mockResolvedValue({ asset: { totalAmount: 50000 } });
-    mockListAssetChanges.mockResolvedValue({ changes: [
-      { _id: 'change-2', type: 'withdraw', amount: 1000, beforeAmount: 51000, afterAmount: 50000, reason: '支取备用', createdAt: '2026-07-22T10:00:00Z' },
-      { _id: 'legacy-change', beforeAmount: 50000, afterAmount: 51000, reason: '历史存入', createdAt: '2026-07-21T10:00:00Z' }
-    ] });
     mockListProjects.mockResolvedValue({
       projects: [
         { _id: 'due', name: '三日内到期', principal: 20000, startDate: '2026-07-01', endDate: '2026-07-24', expectedInterest: 40, fixedReward: 60, manualStatus: 'active' },
@@ -64,7 +58,7 @@ describe('home dashboard', () => {
       ]
     });
     mockUpdateAssets.mockResolvedValue({ asset: { totalAmount: 60000 } });
-    global.wx = { showToast: jest.fn() };
+    global.wx = { showToast: jest.fn(), navigateTo: jest.fn() };
     global.Page = (definition) => { pageDefinition = definition; };
     require('../pages/home/home');
   });
@@ -93,11 +87,60 @@ describe('home dashboard', () => {
     expect(page.data.dueSoonProjects.map((project) => project._id)).toEqual(['due']);
     expect(page.data.overdueProjects.map((project) => project._id)).toEqual(['overdue']);
     expect(page.data.dashboardReady).toBe(true);
-    expect(mockListAssetChanges).toHaveBeenCalledTimes(1);
-    expect(page.data.assetChanges).toEqual([
-      expect.objectContaining({ _id: 'change-2', typeLabel: '支取', amountText: '-¥1000.00', beforeText: '¥51000.00', afterText: '¥50000.00' }),
-      expect.objectContaining({ _id: 'legacy-change', typeLabel: '存入', amountText: '+¥1000.00', beforeText: '¥50000.00', afterText: '¥51000.00' })
-    ]);
+  });
+
+  test('keeps reward-received principal-holding projects in due-soon reminders', async () => {
+    mockListProjects.mockResolvedValue({
+      projects: [{
+        _id: 'reward-received-due',
+        name: '奖励已到账本金待到账',
+        principal: 12000,
+        startDate: '2026-07-01',
+        endDate: '2026-07-24',
+        expectedInterest: 30,
+        fixedReward: 50,
+        actualFixedReward: 50,
+        manualStatus: 'active',
+        principalStatus: 'holding',
+        rewardStatus: 'received',
+        rewardReceivedDate: '2026-07-20'
+      }]
+    });
+    const page = createHomePage();
+
+    page.loadDashboard();
+    await flushPromises();
+    await flushPromises();
+
+    expect(page.data.dueSoonProjects.map((project) => project._id)).toEqual(['reward-received-due']);
+    expect(page.data.overdueProjects).toEqual([]);
+  });
+
+  test('shows principal-released reward-pending projects in overdue reminders', async () => {
+    mockListProjects.mockResolvedValue({
+      projects: [{
+        _id: 'reward-pending-overdue',
+        name: '本金已到账奖励待到账',
+        principal: 12000,
+        startDate: '2026-07-01',
+        endDate: '2026-07-20',
+        redeemDate: '2026-07-20',
+        actualInterest: 30,
+        fixedReward: 50,
+        actualFixedReward: 0,
+        manualStatus: 'active',
+        principalStatus: 'released',
+        rewardStatus: 'pending'
+      }]
+    });
+    const page = createHomePage();
+
+    page.loadDashboard();
+    await flushPromises();
+    await flushPromises();
+
+    expect(page.data.dueSoonProjects).toEqual([]);
+    expect(page.data.overdueProjects.map((project) => project._id)).toEqual(['reward-pending-overdue']);
   });
 
   test('does not expose or seed the asset editor before dashboard data loads', async () => {
@@ -106,14 +149,18 @@ describe('home dashboard', () => {
 
     expect(page.data.totalAssetsValue).toBeNull();
     expect(page.data.dashboardReady).toBe(false);
-    expect(markup).toContain('wx:if="{{dashboardReady}}" class="grid"');
+    expect(markup).toContain('wx:if="{{dashboardReady}}" class="weui-panel dashboard-panel"');
     expect(markup).toContain('当前投资总金额');
     expect(markup).toContain('在途收益');
     expect(markup).toContain('已到账收益');
     expect(markup).toContain('wx:if="{{loading && !dashboardReady && !errorMessage}}"');
     expect(markup).toContain('wx:if="{{dashboardReady && !editingAssets}}"');
-    expect(markup).toContain('调整记录');
-    expect(markup).toContain('wx:for="{{assetChanges}}"');
+    expect(markup).toContain('label="家庭总资产" value="{{metrics.totalAssets}}" bindtap="openAssetChanges"');
+    expect(markup).not.toContain('asset-change-section');
+    expect(markup).not.toContain('wx:for="{{assetChanges}}"');
+    expect(markup).toContain('weui-panel');
+    expect(markup).toContain('weui-cells');
+    expect(markup).toContain('weui-btn weui-btn_primary');
     page.startAssetEdit();
 
     expect(page.data.editingAssets).toBe(false);
@@ -124,8 +171,8 @@ describe('home dashboard', () => {
     const markup = fs.readFileSync(path.join(__dirname, '../pages/home/home.wxml'), 'utf8');
     const styles = fs.readFileSync(path.join(__dirname, '../pages/home/home.wxss'), 'utf8');
 
-    expect(markup).toContain('class="reminder reminder--overdue"');
-    expect(markup).toContain('class="reminder reminder--due-soon"');
+    expect(markup).toContain('class="weui-cell reminder reminder--overdue"');
+    expect(markup).toContain('class="weui-cell reminder reminder--due-soon"');
     expect(styles).toContain('.reminder--overdue');
     expect(styles).toContain('border-left: 6rpx solid var(--color-danger)');
     expect(styles).toContain('.reminder--due-soon');
@@ -136,10 +183,24 @@ describe('home dashboard', () => {
     const styles = fs.readFileSync(path.join(__dirname, '../pages/home/home.wxss'), 'utf8');
 
     expect(styles).toContain('.asset-type-button--active');
-    expect(styles).toContain('background: var(--color-accent)');
+    expect(styles).toContain('background: var(--weui-BRAND)');
     expect(styles).toContain('color: #FFFFFF');
     expect(styles).toContain('font-weight: 700');
-    expect(styles).toContain('box-shadow: 0 8rpx 18rpx rgba(0, 122, 255, 0.22)');
+    expect(styles).toContain('box-shadow: none');
+    expect(styles).not.toContain('box-shadow: 0 8rpx 18rpx rgba(0, 122, 255, 0.22)');
+    expect(styles).toContain('.asset-type-button::after');
+    expect(styles).toContain('border: 0');
+    expect(styles).toContain('.asset-type-button.weui-btn_default');
+    expect(styles).toContain('background: transparent');
+    expect(styles).toContain('height: 64rpx');
+    expect(styles).toContain('min-height: 64rpx');
+    expect(styles).toContain('width: 100%');
+    expect(styles).toContain('min-width: 0');
+    expect(styles).toContain('padding: 0');
+    expect(styles).toContain('display: flex');
+    expect(styles).toContain('align-items: center');
+    expect(styles).toContain('.asset-type-control .weui-btn + .weui-btn');
+    expect(styles).toContain('margin-top: 0');
   });
 
   test('records a deposit from the dashboard with a required reason', async () => {
@@ -219,15 +280,15 @@ describe('home dashboard', () => {
     await flushPromises();
   });
 
-  test('toggles the asset change record list', () => {
+  test('opens asset change records from the total assets metric', () => {
     const page = createHomePage();
 
-    page.toggleAssetChanges();
-    expect(page.data.showingAssetChanges).toBe(true);
-    expect(page.data.assetChangeToggleText).toBe('收起');
-    page.toggleAssetChanges();
-    expect(page.data.showingAssetChanges).toBe(false);
-    expect(page.data.assetChangeToggleText).toBe('查看全部');
+    page.openAssetChanges();
+    expect(global.wx.navigateTo).not.toHaveBeenCalled();
+    page.data.dashboardReady = true;
+    page.openAssetChanges();
+
+    expect(global.wx.navigateTo).toHaveBeenCalledWith({ url: '/pages/asset-changes/asset-changes' });
   });
 
   test('keeps home markup free of ternary expressions for stable mini-program compilation', () => {
@@ -236,7 +297,6 @@ describe('home dashboard', () => {
     expect(markup).not.toContain(' ? ');
     expect(markup).not.toContain("assetChangeType === 'deposit'");
     expect(markup).not.toContain("assetChangeType === 'withdraw'");
-    expect(markup).toContain('{{assetChangeToggleText}}');
     expect(markup).toContain('{{depositTypeClass}}');
     expect(markup).toContain('{{withdrawTypeClass}}');
   });
@@ -254,7 +314,7 @@ describe('home dashboard', () => {
     expect(page.data.errorMessage).toBe('资金看板加载失败，请稍后重试');
     const markup = fs.readFileSync(path.join(__dirname, '../pages/home/home.wxml'), 'utf8');
     expect(markup).toContain('wx:if="{{errorMessage}}"');
-    expect(markup).toContain('wx:if="{{dashboardReady}}" class="section"');
+    expect(markup).toContain('wx:if="{{dashboardReady}}" class="weui-panel section"');
     page.startAssetEdit();
     page.data.assetAmountInput = '0';
     page.data.assetReasonInput = '错误覆盖';
@@ -263,17 +323,4 @@ describe('home dashboard', () => {
     expect(mockUpdateAssets).not.toHaveBeenCalled();
   });
 
-  test('keeps dashboard usable when asset change records fail to load', async () => {
-    mockListAssetChanges.mockRejectedValue(new Error('records unavailable'));
-    const page = createHomePage();
-
-    page.loadDashboard();
-    await flushPromises();
-    await flushPromises();
-
-    expect(page.data.dashboardReady).toBe(true);
-    expect(page.data.errorMessage).toBe('');
-    expect(page.data.metrics.totalAssets).toBe('¥50000.00');
-    expect(page.data.assetChanges).toEqual([]);
-  });
 });

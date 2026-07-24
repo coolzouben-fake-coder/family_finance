@@ -1,15 +1,15 @@
 page {
-  --color-system-background: #f5f5f7;
-  --color-grouped-background: #ffffff;
-  --color-primary-text: #1d1d1f;
-  --color-secondary-text: #6e6e73;
-  --color-tertiary-text: #8e8e93;
-  --color-separator: #e5e5ea;
-  --color-accent: #007aff;
-  --color-success: #34c759;
-  --color-warning: #ff9500;
-  --color-danger: #ff3b30;
-  --radius-card: 8rpx;
+  --color-system-background: var(--weui-BG-0);
+  --color-grouped-background: var(--weui-BG-2);
+  --color-primary-text: var(--weui-FG-0);
+  --color-secondary-text: var(--weui-FG-1);
+  --color-tertiary-text: var(--weui-FG-2);
+  --color-separator: var(--weui-FG-3);
+  --color-accent: var(--weui-BRAND);
+  --color-success: var(--weui-GREEN);
+  --color-warning: #fa9d3b;
+  --color-danger: var(--weui-RED);
+  --radius-card: 16rpx;
   --space-page-x: 32rpx;
   --space-page-y: 24rpx;
   --space-section: 32rpx;
@@ -22,67 +22,59 @@ page {
 
 .page {
   min-height: 100vh;
-  padding: var(--space-page-y) var(--space-page-x);
-  background: var(--color-system-background);
+  padding: var(--space-page-y) 0 48rpx;
+  background: var(--weui-BG-0);
   box-sizing: border-box;
-  color: var(--color-primary-text);
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
-  letter-spacing: 0;
+  color: var(--weui-FG-0);
+  font-family: -apple-system-font, "Helvetica Neue", sans-serif;
 }
 
 .surface {
-  border-radius: var(--radius-card);
-  background: var(--color-grouped-background);
+  background: var(--weui-BG-2);
 }
 
 .section-title {
-  color: var(--color-primary-text);
+  padding: 0 var(--space-page-x);
+  color: var(--weui-FG-0);
   font-size: var(--font-section);
-  font-weight: 700;
-  line-height: 1.25;
+  font-weight: 600;
+  line-height: 1.35;
 }
 
 .caption {
-  color: var(--color-secondary-text);
+  color: var(--weui-FG-1);
   font-size: var(--font-caption);
-  line-height: 1.4;
+  line-height: 1.45;
 }
 
 .primary-button {
-  height: 88rpx;
-  border-radius: var(--radius-card);
-  background: var(--color-accent);
-  color: #ffffff;
-  font-size: var(--font-body);
-  font-weight: 600;
-  line-height: 88rpx;
+  margin: 0;
+  border-radius: 8rpx;
 }
 
 .secondary-button {
-  height: 88rpx;
-  border: 1rpx solid var(--color-separator);
-  border-radius: var(--radius-card);
-  background: var(--color-grouped-background);
-  color: var(--color-accent);
-  font-size: var(--font-body);
-  font-weight: 600;
-  line-height: 88rpx;
+  margin: 0;
+  border-radius: 8rpx;
+  background: var(--weui-BG-2);
+  color: var(--weui-BRAND);
 }
 
 .status-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   min-width: 112rpx;
-  padding: 8rpx 12rpx;
-  border-radius: var(--radius-card);
+  padding: 6rpx 12rpx;
+  border-radius: 6rpx;
   box-sizing: border-box;
   color: #ffffff;
   font-size: 22rpx;
-  font-weight: 600;
+  font-weight: 500;
   line-height: 1.2;
-  text-align: center;
 }
 
 .status-active {
-  background: var(--color-accent);
+  background: var(--weui-BRAND);
 }
 
 .status-due-soon {
@@ -90,13 +82,13 @@ page {
 }
 
 .status-overdue {
-  background: var(--color-danger);
+  background: var(--weui-RED);
 }
 
 .status-redeemed {
-  background: var(--color-success);
+  background: var(--weui-GREEN);
 }
 
 .status-cancelled {
-  background: var(--color-tertiary-text);
+  background: var(--weui-FG-2);
 }

@@ -1,0 +1,29 @@
+.asset-change-row {
+  align-items: flex-start;
+  gap: 20rpx;
+}
+
+.asset-change-title {
+  margin-bottom: 8rpx;
+  color: var(--weui-FG-0);
+  font-size: var(--font-body);
+  font-weight: 600;
+}
+
+.asset-change-balance {
+  flex-shrink: 0;
+  color: var(--weui-FG-1);
+  font-size: var(--font-caption);
+  line-height: 1.6;
+  text-align: right;
+}
+
+.empty,
+.error-state {
+  color: var(--weui-FG-1);
+  font-size: var(--font-caption);
+}
+
+.error-state {
+  color: var(--color-danger);
+}

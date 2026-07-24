@@ -1,27 +1,27 @@
 <view class="page">
-  <button class="primary-button" bindtap="goCreate">新增项目</button>
+  <button class="weui-btn weui-btn_primary primary-button" bindtap="goCreate">新增项目</button>
 
-  <view class="filters">
+  <view class="weui-cells filters">
     <picker mode="selector" range="{{statusOptions}}" range-key="label" bindchange="onStatusChange">
-      <view class="filter-control">{{selectedStatusLabel}}</view>
+      <view class="weui-cell filter-control">{{selectedStatusLabel}}</view>
     </picker>
     <picker mode="selector" range="{{categoryOptions}}" range-key="name" bindchange="onCategoryChange">
-      <view class="filter-control">{{selectedCategoryLabel}}</view>
+      <view class="weui-cell filter-control">{{selectedCategoryLabel}}</view>
     </picker>
     <picker mode="selector" range="{{registrantOptions}}" range-key="nickname" bindchange="onRegistrantChange">
-      <view class="filter-control">{{selectedRegistrantLabel}}</view>
+      <view class="weui-cell filter-control">{{selectedRegistrantLabel}}</view>
     </picker>
-    <picker mode="selector" range="{{yearOptions}}" range-key="label" bindchange="onYearChange">
-      <view class="filter-control">{{selectedYearLabel}}</view>
+    <picker mode="selector" range="{{yearOptions}}" bindchange="onYearChange">
+      <view class="weui-cell filter-control">{{selectedYearLabel}}</view>
     </picker>
   </view>
 
-  <view wx:if="{{loading}}" class="empty caption">正在加载项目</view>
-  <view wx:elif="{{errorMessage}}" class="error-state surface">{{errorMessage}}</view>
+  <view wx:if="{{loading}}" class="weui-panel empty caption">正在加载项目</view>
+  <view wx:elif="{{errorMessage}}" class="weui-panel error-state">{{errorMessage}}</view>
   <view wx:elif="{{projects.length}}" class="list">
     <project-card wx:for="{{projects}}" wx:key="_id" project="{{item}}" bind:open="openProject" bind:cancel="cancelProject" bind:remove="removeProject" />
   </view>
-  <view wx:else class="empty surface">
+  <view wx:else class="weui-panel empty">
     <view class="empty-title">暂无符合条件的项目</view>
     <view class="caption">调整筛选条件或新增一笔项目。</view>
   </view>

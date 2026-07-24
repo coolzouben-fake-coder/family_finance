@@ -7,6 +7,16 @@
       "name": "assets",
       "runtime": "Nodejs16.13",
       "handler": "index.main"
+    },
+    {
+      "name": "projects",
+      "runtime": "Nodejs16.13",
+      "handler": "index.main"
+    },
+    {
+      "name": "stats",
+      "runtime": "Nodejs16.13",
+      "handler": "index.main"
     }
   ]
 }

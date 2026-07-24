@@ -16,14 +16,31 @@ function calcActualAnnualRate(actualTotalReturn, principal, holdingDays) {
 }
 
 function summarizeCapital(totalAssets, projects) {
-  const activeProjects = projects.filter((project) => project.manualStatus === 'active');
-  const redeemedProjects = projects.filter((project) => project.manualStatus === 'redeemed');
-  const investedAmount = roundMoney(activeProjects
+  const activeProjects = projects.filter((project) => project.manualStatus !== 'cancelled');
+  const principalHoldingProjects = activeProjects.filter((project) => (
+    (project.principalStatus || (project.manualStatus === 'redeemed' ? 'released' : 'holding')) === 'holding'
+  ));
+  const principalReleasedProjects = activeProjects.filter((project) => (
+    (project.principalStatus || (project.manualStatus === 'redeemed' ? 'released' : 'holding')) === 'released'
+  ));
+  const rewardReceivedProjects = activeProjects.filter((project) => (
+    (project.rewardStatus || (project.manualStatus === 'redeemed' || project.returnStatus === 'received' ? 'received' : 'pending')) === 'received'
+  ));
+  const rewardPendingProjects = activeProjects.filter((project) => (
+    (project.rewardStatus || (project.manualStatus === 'redeemed' || project.returnStatus === 'received' ? 'received' : 'pending')) === 'pending'
+  ));
+  const investedAmount = roundMoney(principalHoldingProjects
     .reduce((sum, project) => sum + Number(project.principal || 0), 0));
-  const inTransitReturn = roundMoney(activeProjects
-    .reduce((sum, project) => sum + Number(project.expectedInterest || 0) + Number(project.fixedReward || 0), 0));
-  const realizedReturn = roundMoney(redeemedProjects
-    .reduce((sum, project) => sum + Number(project.actualInterest || 0) + Number(project.actualFixedReward || 0), 0));
+  const inTransitInterest = principalHoldingProjects
+    .reduce((sum, project) => sum + Number(project.expectedInterest || 0), 0);
+  const inTransitReward = rewardPendingProjects
+    .reduce((sum, project) => sum + Number(project.fixedReward || 0), 0);
+  const realizedInterest = principalReleasedProjects
+    .reduce((sum, project) => sum + Number(project.actualInterest || 0), 0);
+  const realizedReward = rewardReceivedProjects
+    .reduce((sum, project) => sum + Number(project.actualFixedReward || 0), 0);
+  const inTransitReturn = roundMoney(inTransitInterest + inTransitReward);
+  const realizedReturn = roundMoney(realizedInterest + realizedReward);
 
   const idleAmount = roundMoney((Number(totalAssets) || 0) - investedAmount);
   const utilizationRate = totalAssets > 0 ? investedAmount / totalAssets : 0;

@@ -1,75 +1,75 @@
 <view class="page">
-  <view class="header">
+  <view class="weui-panel dashboard-hero">
     <view>
       <view class="title">家庭理财</view>
       <view class="subtitle">当前资金状态与项目到期提醒</view>
     </view>
   </view>
 
-  <view wx:if="{{loading && !dashboardReady && !errorMessage}}" class="loading-state surface">资金看板加载中</view>
+  <view wx:if="{{loading && !dashboardReady && !errorMessage}}" class="weui-panel loading-state">资金看板加载中</view>
 
-  <view wx:if="{{dashboardReady}}" class="grid">
-    <metric-card label="家庭总资产" value="{{metrics.totalAssets}}" />
-    <metric-card label="当前投资总金额" value="{{metrics.investedAmount}}" />
-    <metric-card label="空闲资金" value="{{metrics.idleAmount}}" />
-    <metric-card label="资金利用率" value="{{metrics.utilizationRate}}" />
-    <metric-card label="在途收益" value="{{metrics.inTransitReturn}}" />
-    <metric-card label="已到账收益" value="{{metrics.realizedReturn}}" />
+  <view wx:if="{{dashboardReady}}" class="weui-panel dashboard-panel">
+    <view class="weui-panel__hd">资金看板</view>
+    <view class="grid metric-grid">
+      <metric-card label="家庭总资产" value="{{metrics.totalAssets}}" bindtap="openAssetChanges" />
+      <metric-card label="当前投资总金额" value="{{metrics.investedAmount}}" />
+      <metric-card label="空闲资金" value="{{metrics.idleAmount}}" />
+      <metric-card label="资金利用率" value="{{metrics.utilizationRate}}" />
+      <metric-card label="在途收益" value="{{metrics.inTransitReturn}}" />
+      <metric-card label="已到账收益" value="{{metrics.realizedReturn}}" />
+    </view>
   </view>
 
-  <button wx:if="{{dashboardReady && !editingAssets}}" class="asset-edit-button" bindtap="startAssetEdit">调整家庭总资产</button>
-  <view wx:elif="{{dashboardReady && editingAssets}}" class="asset-editor surface">
-    <view class="section-title">调整家庭总资产</view>
+  <button wx:if="{{dashboardReady && !editingAssets}}" class="weui-btn weui-btn_primary asset-edit-button" bindtap="startAssetEdit">调整家庭总资产</button>
+  <view wx:elif="{{dashboardReady && editingAssets}}" class="weui-form asset-editor">
+    <view class="weui-form__text-area">
+      <view class="weui-form__title">调整家庭总资产</view>
+    </view>
     <view class="asset-type-control">
-      <button class="asset-type-button {{depositTypeClass}}" data-type="deposit" bindtap="onAssetTypeChange">存入</button>
-      <button class="asset-type-button {{withdrawTypeClass}}" data-type="withdraw" bindtap="onAssetTypeChange">支取</button>
+      <button class="weui-btn weui-btn_default asset-type-button {{depositTypeClass}}" data-type="deposit" bindtap="onAssetTypeChange">存入</button>
+      <button class="weui-btn weui-btn_default asset-type-button {{withdrawTypeClass}}" data-type="withdraw" bindtap="onAssetTypeChange">支取</button>
     </view>
-    <input class="asset-field" type="digit" value="{{assetAmountInput}}" placeholder="调整金额" bindinput="onAssetInput" />
-    <input class="asset-field" value="{{assetReasonInput}}" maxlength="100" placeholder="调整原因" bindinput="onAssetReasonInput" />
-    <view class="asset-actions">
-      <button class="secondary-button" disabled="{{savingAssets}}" bindtap="cancelAssetEdit">取消</button>
-      <button class="primary-button" loading="{{savingAssets}}" disabled="{{savingAssets}}" bindtap="saveAssets">保存</button>
+    <view class="weui-cells weui-cells_form asset-cells">
+      <view class="weui-cell">
+        <view class="weui-cell__hd"><label class="weui-label">金额</label></view>
+        <view class="weui-cell__bd">
+          <input class="weui-input asset-field" type="digit" value="{{assetAmountInput}}" placeholder="调整金额" bindinput="onAssetInput" />
+        </view>
+      </view>
+      <view class="weui-cell">
+        <view class="weui-cell__hd"><label class="weui-label">原因</label></view>
+        <view class="weui-cell__bd">
+          <input class="weui-input asset-field" value="{{assetReasonInput}}" maxlength="100" placeholder="调整原因" bindinput="onAssetReasonInput" />
+        </view>
+      </view>
+    </view>
+    <view class="weui-form__opr-area asset-actions">
+      <button class="weui-btn weui-btn_default secondary-button" disabled="{{savingAssets}}" bindtap="cancelAssetEdit">取消</button>
+      <button class="weui-btn weui-btn_primary primary-button" loading="{{savingAssets}}" disabled="{{savingAssets}}" bindtap="saveAssets">保存</button>
     </view>
   </view>
 
-  <view wx:if="{{dashboardReady}}" class="section asset-change-section">
-    <view class="asset-change-header" bindtap="toggleAssetChanges">
-      <view class="section-title">调整记录</view>
-      <view class="caption">{{assetChangeToggleText}}</view>
-    </view>
-    <view wx:if="{{showingAssetChanges}}">
-      <view wx:if="{{assetChanges.length === 0}}" class="empty">暂无调整记录</view>
-      <view wx:for="{{assetChanges}}" wx:key="_id" class="asset-change-row">
-        <view>
-          <view class="asset-change-title">{{item.typeLabel}} {{item.amountText}}</view>
-          <view class="caption">{{item.reason}}</view>
-          <view class="caption">{{item.createdText}}</view>
-        </view>
-        <view class="asset-change-balance">
-          <view>{{item.beforeText}}</view>
-          <view>{{item.afterText}}</view>
-        </view>
+  <view wx:if="{{errorMessage}}" class="weui-panel error-state">{{errorMessage}}</view>
+
+  <view wx:if="{{dashboardReady}}" class="weui-panel section">
+    <view class="weui-panel__hd section-title">已到期待确认</view>
+    <view class="weui-cells">
+      <view wx:if="{{overdueProjects.length === 0}}" class="weui-cell empty">暂无需要确认的项目</view>
+      <view wx:for="{{overdueProjects}}" wx:key="_id" class="weui-cell reminder reminder--overdue">
+        <text>{{item.name}}</text>
+        <text>{{item.displayAmount}}</text>
       </view>
     </view>
   </view>
 
-  <view wx:if="{{errorMessage}}" class="error-state surface">{{errorMessage}}</view>
-
-  <view wx:if="{{dashboardReady}}" class="section">
-    <view class="section-title">已到期待确认</view>
-    <view wx:if="{{overdueProjects.length === 0}}" class="empty">暂无需要确认的项目</view>
-    <view wx:for="{{overdueProjects}}" wx:key="_id" class="reminder reminder--overdue">
-      <text>{{item.name}}</text>
-      <text>{{item.displayAmount}}</text>
-    </view>
-  </view>
-
-  <view wx:if="{{dashboardReady}}" class="section">
-    <view class="section-title">即将到期</view>
-    <view wx:if="{{dueSoonProjects.length === 0}}" class="empty">暂无即将到期项目</view>
-    <view wx:for="{{dueSoonProjects}}" wx:key="_id" class="reminder reminder--due-soon">
-      <text>{{item.name}}</text>
-      <text>{{item.endDate}}</text>
+  <view wx:if="{{dashboardReady}}" class="weui-panel section">
+    <view class="weui-panel__hd section-title">即将到期</view>
+    <view class="weui-cells">
+      <view wx:if="{{dueSoonProjects.length === 0}}" class="weui-cell empty">暂无即将到期项目</view>
+      <view wx:for="{{dueSoonProjects}}" wx:key="_id" class="weui-cell reminder reminder--due-soon">
+        <text>{{item.name}}</text>
+        <text>{{item.endDate}}</text>
+      </view>
     </view>
   </view>
 </view>

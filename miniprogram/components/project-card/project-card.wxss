@@ -1,13 +1,16 @@
-.card { padding: 24rpx; }
+.card { padding: 0; }
 .top, .row { display: flex; align-items: center; justify-content: space-between; gap: 16rpx; }
+.top { padding-top: 24rpx; padding-bottom: 16rpx; }
 .name { min-width: 0; font-size: 30rpx; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .status { flex: 0 0 auto; color: var(--color-accent); font-size: var(--font-caption); }
 .status-due_soon { color: var(--color-warning); }
 .status-overdue_pending { color: var(--color-danger); }
 .status-redeemed { color: var(--color-success); }
 .status-cancelled { color: var(--color-tertiary-text); }
-.row { margin-top: 14rpx; color: var(--color-secondary-text); font-size: var(--font-caption); }
-.actions { display: flex; justify-content: flex-end; gap: 12rpx; margin-top: 16rpx; padding-top: 16rpx; border-top: 1rpx solid var(--color-separator); }
-.card-action { min-width: 128rpx; height: 56rpx; margin: 0; padding: 0 16rpx; border: 0; background: transparent; font-size: var(--font-caption); line-height: 56rpx; }
+.card-details { margin-top: 0; }
+.row { color: var(--color-secondary-text); font-size: var(--font-caption); }
+.actions { display: flex; justify-content: flex-end; gap: 12rpx; padding: 16rpx 24rpx 24rpx; }
+.card-action { min-width: 128rpx; height: 56rpx; margin: 0; padding: 0 16rpx; border: 0; font-size: var(--font-caption); line-height: 56rpx; }
 .card-action--cancel { color: var(--color-warning); }
-.card-action--remove { color: var(--color-danger); }
+.card-action--remove.weui-btn_warn { background: var(--weui-RED); color: #FFFFFF; }
+.card-action--remove::after { border: 0; }

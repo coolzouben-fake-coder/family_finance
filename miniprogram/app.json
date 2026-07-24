@@ -1,6 +1,7 @@
 {
   "pages": [
     "pages/home/home",
+    "pages/asset-changes/asset-changes",
     "pages/projects/projects",
     "pages/project-form/project-form",
     "pages/stats/stats",

@@ -1,4 +1,8 @@
-<view class="page denied">
-  <view class="title">无访问权限</view>
-  <view class="desc">当前微信账号不在家庭成员白名单中。</view>
+<view class="page">
+  <view class="weui-msg denied">
+    <view class="weui-msg__text-area">
+      <view class="weui-msg__title title">无访问权限</view>
+      <view class="weui-msg__desc desc">当前微信账号不在家庭成员白名单中。</view>
+    </view>
+  </view>
 </view>

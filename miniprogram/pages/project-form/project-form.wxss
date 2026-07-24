@@ -1,10 +1,9 @@
 .field,
 .textarea {
   width: 100%;
-  margin-bottom: 16rpx;
-  padding: 20rpx;
-  border-radius: var(--radius-card);
-  background: var(--color-grouped-background);
+  padding: 0;
+  border: 0;
+  background: transparent;
   box-sizing: border-box;
   color: var(--color-primary-text);
   font-size: var(--font-body);
@@ -12,13 +11,63 @@
 
 .field {
   display: block;
-  height: 96rpx;
+  height: 56rpx;
   line-height: 56rpx;
 }
 
 .picker-field {
   color: var(--color-secondary-text);
+  height: 56rpx;
   line-height: 56rpx;
+}
+
+.return-mode-row {
+  padding-top: 18rpx;
+  padding-bottom: 18rpx;
+}
+
+.return-mode-control {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16rpx;
+  padding: 6rpx;
+  border-radius: 12rpx;
+  background: var(--weui-BG-1);
+}
+
+.return-mode-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-width: 0;
+  height: 64rpx;
+  min-height: 64rpx;
+  margin: 0;
+  padding: 0;
+  border-radius: 8rpx;
+  box-sizing: border-box;
+  color: var(--weui-FG-1);
+  font-size: var(--font-caption);
+  line-height: 64rpx;
+}
+
+.return-mode-control .weui-btn + .weui-btn {
+  margin-top: 0;
+}
+
+.return-mode-button.weui-btn_default {
+  background: transparent;
+}
+
+.return-mode-button::after {
+  border: 0;
+}
+
+.return-mode-button--active,
+.return-mode-button--active.weui-btn_default {
+  background: var(--weui-BRAND);
+  color: #FFFFFF;
 }
 
 .textarea {
@@ -29,22 +78,20 @@
 .redeem,
 .redeemed-note {
   margin-top: var(--space-section);
-  padding: 24rpx;
 }
 
-.redeem .section-title {
-  margin-bottom: 20rpx;
+.project-form,
+.redeem {
+  background: var(--weui-BG-2);
+}
+
+.primary-button,
+.secondary-button,
+.danger-button {
+  margin-top: 24rpx;
 }
 
 .history-warning { margin-bottom: 20rpx; color: var(--color-warning); font-size: var(--font-caption); line-height: 1.5; }
-.empty-field { margin-bottom: 16rpx; padding: 24rpx; border-radius: var(--radius-card); background: var(--color-grouped-background); color: var(--color-tertiary-text); box-sizing: border-box; font-size: 26rpx; }
+.empty-field { color: var(--color-tertiary-text); box-sizing: border-box; font-size: 26rpx; }
 .form-state { padding: 32rpx; text-align: center; }
 .error-state { color: var(--color-danger); }
-
-.danger-button {
-  margin-top: 24rpx;
-  background: transparent;
-  color: var(--color-danger);
-  font-size: var(--font-caption);
-  line-height: 72rpx;
-}

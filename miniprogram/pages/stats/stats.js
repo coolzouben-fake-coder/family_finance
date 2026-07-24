@@ -1,5 +1,5 @@
 const { ensureAllowedSession } = require('../../services/session');
-const { getAnnualStats, listCategories, listUsers } = require('../../services/cloud');
+const { getAnnualStats, listCategories, listUsers, listProjects } = require('../../services/cloud');
 
 function money(value) {
   return `¥${Number(value || 0).toFixed(2)}`;
@@ -9,13 +9,21 @@ function percent(value) {
   return `${(Number(value || 0) * 100).toFixed(2)}%`;
 }
 
+function currentYearText() {
+  return String(new Date().getFullYear());
+}
+
 Page({
   data: {
-    year: new Date().getFullYear(),
+    year: currentYearText(),
+    currentYear: currentYearText(),
+    startYear: currentYearText(),
     loading: true,
     errorMessage: '',
     totalReturn: '¥0.00',
     annualizedRate: '0.00%',
+    familyAssetReturnRate: '0.00%',
+    averageFamilyAssets: '¥0.00',
     fixedRewardShare: '0.00%',
     returnBreakdown: [],
     monthly: [],
@@ -25,23 +33,36 @@ Page({
 
   onLoad() {
     ensureAllowedSession()
+      .then(() => this.loadYearBounds())
       .then(() => this.loadStats())
       .catch(() => this.setData({ loading: false, errorMessage: '收益统计加载失败，请稍后重试' }));
   },
 
+  loadYearBounds() {
+    return listProjects().then(({ projects }) => {
+      const years = (projects || [])
+        .map((project) => project.startDate && project.startDate.slice(0, 4))
+        .filter(Boolean);
+      const earliestYear = years.length ? years.sort()[0] : this.data.currentYear;
+      this.setData({ startYear: earliestYear });
+    });
+  },
+
   onYearChange(event) {
-    this.setData({ year: Number(event.detail.value) });
+    this.setData({ year: event.detail.value });
     return this.loadStats();
   },
 
   loadStats() {
     this.setData({ loading: true, errorMessage: '' });
-    return Promise.all([getAnnualStats(this.data.year), listCategories(), listUsers()])
+    return Promise.all([getAnnualStats(Number(this.data.year)), listCategories(), listUsers()])
       .then(([{ stats }, { categories }, { users }]) => {
         this.setData({
           loading: false,
           totalReturn: money(stats.totalReturn),
           annualizedRate: percent(stats.annualizedRate),
+          familyAssetReturnRate: percent(stats.familyAssetReturnRate),
+          averageFamilyAssets: money(stats.averageFamilyAssets),
           fixedRewardShare: percent(stats.fixedRewardShare),
           returnBreakdown: [
             {

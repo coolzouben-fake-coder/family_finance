@@ -1,39 +1,156 @@
 <view class="page">
-  <view wx:if="{{loading}}" class="form-state surface caption">正在加载项目</view>
-  <view wx:elif="{{errorMessage}}" class="form-state error-state surface">{{errorMessage}}</view>
+  <view wx:if="{{loading}}" class="weui-panel form-state caption">正在加载项目</view>
+  <view wx:elif="{{errorMessage}}" class="weui-panel form-state error-state">{{errorMessage}}</view>
   <block wx:else>
-  <input class="field" placeholder="项目名称" value="{{form.name}}" data-field="name" bindinput="onInput" disabled="{{isLocked || saving || redeeming || removing}}" />
-  <view wx:if="{{categories.length > 0}}">
-    <picker mode="selector" range="{{categories}}" range-key="name" bindchange="onCategoryChange" disabled="{{isLocked || saving || redeeming || removing}}">
-      <view class="field picker-field">{{selectedCategoryName || '选择品类'}}</view>
-    </picker>
-  </view>
-  <view wx:else class="empty-field">请先部署并运行 bootstrap 云函数初始化品类</view>
-  <picker mode="selector" range="{{users}}" range-key="displayName" bindchange="onRegistrantChange" disabled="{{isLocked || saving || redeeming || removing}}">
-    <view class="field picker-field">登记人：{{selectedRegistrantName || '选择家庭成员'}}</view>
-  </picker>
-  <input class="field" type="digit" placeholder="本金" value="{{form.principal}}" data-field="principal" bindinput="onInput" disabled="{{isLocked || saving || redeeming || removing}}" />
-  <picker mode="date" value="{{form.startDate}}" bindchange="onStartDateChange" disabled="{{isLocked || saving || redeeming || removing}}">
-    <view class="field picker-field">{{startDateText}}</view>
-  </picker>
-  <picker mode="date" value="{{form.endDate}}" bindchange="onEndDateChange" disabled="{{isLocked || saving || redeeming || removing}}">
-    <view class="field picker-field">{{endDateText}}</view>
-  </picker>
-  <input class="field" type="digit" placeholder="预期年化，如 0.03" value="{{form.expectedAnnualRate}}" data-field="expectedAnnualRate" bindinput="onInput" disabled="{{isLocked || saving || redeeming || removing}}" />
-  <input class="field" type="digit" placeholder="固定奖励" value="{{form.fixedReward}}" data-field="fixedReward" bindinput="onInput" disabled="{{isLocked || saving || redeeming || removing}}" />
-  <textarea class="textarea" placeholder="备注" value="{{form.remark}}" data-field="remark" bindinput="onInput" disabled="{{isLocked || saving || redeeming || removing}}" />
-  <button wx:if="{{!isLocked}}" class="primary-button" loading="{{saving}}" disabled="{{saving || redeeming || removing}}" bindtap="save">保存</button>
-  <view wx:if="{{projectId && !isCancelled}}" class="redeem surface">
-    <view class="section-title">{{isRedeemed ? '更正到账记录' : '确认到账'}}</view>
-    <view wx:if="{{isRedeemed}}" class="history-warning">更正后会重新计算对应年度的历史统计。</view>
-    <picker mode="date" value="{{redeemForm.redeemDate}}" bindchange="onRedeemDateChange" disabled="{{saving || redeeming || removing}}">
-      <view class="field picker-field">{{redeemDateText}}</view>
-    </picker>
-    <input class="field" type="text" placeholder="实际利息" value="{{redeemForm.actualInterest}}" data-field="actualInterest" bindinput="onRedeemInput" disabled="{{saving || redeeming || removing}}" />
-    <input class="field" type="text" placeholder="实际固定奖励" value="{{redeemForm.actualFixedReward}}" data-field="actualFixedReward" bindinput="onRedeemInput" disabled="{{saving || redeeming || removing}}" />
-    <button class="secondary-button" loading="{{redeeming}}" disabled="{{saving || redeeming || removing}}" bindtap="redeem">{{isRedeemed ? '保存更正' : '确认到账'}}</button>
-  </view>
-  <view wx:if="{{isLocked}}" class="redeemed-note surface caption">{{lockedMessage}}</view>
-  <button wx:if="{{projectId}}" class="danger-button" loading="{{removing}}" disabled="{{saving || redeeming || removing}}" bindtap="remove">删除项目</button>
+    <view class="weui-form project-form">
+      <view class="weui-cells weui-cells_form">
+        <view class="weui-cell">
+          <view class="weui-cell__hd"><label class="weui-label">名称</label></view>
+          <view class="weui-cell__bd"><input class="weui-input field" placeholder="项目名称" value="{{form.name}}" data-field="name" bindinput="onInput" disabled="{{isLocked || saving || receivingReturn || redeeming || removing}}" /></view>
+        </view>
+        <view wx:if="{{categories.length > 0}}" class="weui-cell">
+          <view class="weui-cell__hd"><label class="weui-label">品类</label></view>
+          <view class="weui-cell__bd">
+            <picker mode="selector" range="{{categories}}" range-key="name" bindchange="onCategoryChange" disabled="{{isLocked || saving || receivingReturn || redeeming || removing}}">
+              <view class="picker-field">{{selectedCategoryDisplay}}</view>
+            </picker>
+          </view>
+        </view>
+        <view wx:else class="weui-cell empty-field">请先部署并运行 bootstrap 云函数初始化品类</view>
+        <view class="weui-cell">
+          <view class="weui-cell__hd"><label class="weui-label">登记人</label></view>
+          <view class="weui-cell__bd">
+            <picker mode="selector" range="{{users}}" range-key="displayName" bindchange="onRegistrantChange" disabled="{{isLocked || saving || receivingReturn || redeeming || removing}}">
+              <view class="picker-field">{{selectedRegistrantDisplay}}</view>
+            </picker>
+          </view>
+        </view>
+        <view class="weui-cell">
+          <view class="weui-cell__hd"><label class="weui-label">本金</label></view>
+          <view class="weui-cell__bd"><input class="weui-input field" type="digit" placeholder="本金" value="{{form.principal}}" data-field="principal" bindinput="onInput" disabled="{{isLocked || saving || receivingReturn || redeeming || removing}}" /></view>
+        </view>
+        <view class="weui-cell">
+          <view class="weui-cell__hd"><label class="weui-label">开始</label></view>
+          <view class="weui-cell__bd">
+            <picker mode="date" value="{{form.startDate}}" bindchange="onStartDateChange" disabled="{{isLocked || saving || receivingReturn || redeeming || removing}}">
+              <view class="picker-field">{{startDateText}}</view>
+            </picker>
+          </view>
+        </view>
+        <view class="weui-cell">
+          <view class="weui-cell__hd"><label class="weui-label">结束</label></view>
+          <view class="weui-cell__bd">
+            <picker mode="date" value="{{form.endDate}}" bindchange="onEndDateChange" disabled="{{isLocked || saving || receivingReturn || redeeming || removing}}">
+              <view class="picker-field">{{endDateText}}</view>
+            </picker>
+          </view>
+        </view>
+        <view class="weui-cell return-mode-row">
+          <view class="weui-cell__bd">
+            <view class="return-mode-control">
+              <button class="weui-btn weui-btn_default return-mode-button {{annualRateModeClass}}" data-mode="annualRate" bindtap="onExpectedReturnModeChange" disabled="{{isLocked || saving || receivingReturn || redeeming || removing}}">按年化</button>
+              <button class="weui-btn weui-btn_default return-mode-button {{fixedReturnModeClass}}" data-mode="fixedReturn" bindtap="onExpectedReturnModeChange" disabled="{{isLocked || saving || receivingReturn || redeeming || removing}}">按固定收益</button>
+            </view>
+          </view>
+        </view>
+        <view wx:if="{{isAnnualRateMode}}" class="weui-cell">
+          <view class="weui-cell__hd"><label class="weui-label">年化</label></view>
+          <view class="weui-cell__bd"><input class="weui-input field" type="digit" placeholder="预期年化，如 0.03" value="{{form.expectedAnnualRate}}" data-field="expectedAnnualRate" bindinput="onInput" disabled="{{isLocked || saving || receivingReturn || redeeming || removing}}" /></view>
+        </view>
+        <view wx:if="{{isFixedReturnMode}}" class="weui-cell">
+          <view class="weui-cell__hd"><label class="weui-label">预期收益</label></view>
+          <view class="weui-cell__bd"><input class="weui-input field" type="digit" placeholder="预期固定收益" value="{{form.expectedFixedReturn}}" data-field="expectedFixedReturn" bindinput="onInput" disabled="{{isLocked || saving || receivingReturn || redeeming || removing}}" /></view>
+        </view>
+        <view class="weui-cell">
+          <view class="weui-cell__hd"><label class="weui-label">奖励</label></view>
+          <view class="weui-cell__bd"><input class="weui-input field" type="digit" placeholder="固定奖励" value="{{form.fixedReward}}" data-field="fixedReward" bindinput="onInput" disabled="{{isLocked || saving || receivingReturn || redeeming || removing}}" /></view>
+        </view>
+        <view class="weui-cell">
+          <view class="weui-cell__bd"><textarea class="textarea" placeholder="备注" value="{{form.remark}}" data-field="remark" bindinput="onInput" disabled="{{isLocked || saving || receivingReturn || redeeming || removing}}" /></view>
+        </view>
+      </view>
+      <button wx:if="{{!isLocked}}" class="weui-btn weui-btn_primary primary-button" loading="{{saving}}" disabled="{{saving || receivingReturn || redeeming || removing}}" bindtap="save">保存</button>
+    </view>
+
+    <view wx:if="{{projectId && !isCancelled && !isRedeemed}}" class="weui-form redeem">
+      <view class="weui-form__text-area">
+        <view class="weui-form__title">到账处理</view>
+      </view>
+      <view wx:if="{{!isPrincipalReleased}}" class="weui-cells weui-cells_form">
+        <view class="weui-cell">
+          <view class="weui-cell__hd"><label class="weui-label">本金/利息到账</label></view>
+          <view class="weui-cell__bd"></view>
+        </view>
+        <view class="weui-cell">
+          <view class="weui-cell__hd"><label class="weui-label">到账日</label></view>
+          <view class="weui-cell__bd">
+            <picker mode="date" value="{{principalForm.redeemDate}}" bindchange="onPrincipalDateChange" disabled="{{saving || receivingReturn || redeeming || removing}}">
+              <view class="picker-field">{{principalDateText}}</view>
+            </picker>
+          </view>
+        </view>
+        <view class="weui-cell">
+          <view class="weui-cell__hd"><label class="weui-label">利息</label></view>
+          <view class="weui-cell__bd"><input class="weui-input field" type="text" placeholder="实际利息" value="{{principalForm.actualInterest}}" data-field="actualInterest" bindinput="onPrincipalInput" disabled="{{saving || receivingReturn || redeeming || removing}}" /></view>
+        </view>
+        <button class="weui-btn weui-btn_default secondary-button" loading="{{redeeming}}" disabled="{{saving || receivingReturn || redeeming || removing}}" bindtap="redeemPrincipal">确认本金到账</button>
+      </view>
+      <view wx:if="{{!isRewardReceived}}" class="weui-cells weui-cells_form">
+        <view class="weui-cell">
+          <view class="weui-cell__hd"><label class="weui-label">奖励到账</label></view>
+          <view class="weui-cell__bd"></view>
+        </view>
+        <view class="weui-cell">
+          <view class="weui-cell__hd"><label class="weui-label">到账日</label></view>
+          <view class="weui-cell__bd">
+            <picker mode="date" value="{{rewardForm.rewardReceivedDate}}" bindchange="onRewardDateChange" disabled="{{saving || receivingReturn || redeeming || removing}}">
+              <view class="picker-field">{{rewardDateText}}</view>
+            </picker>
+          </view>
+        </view>
+        <view class="weui-cell">
+          <view class="weui-cell__hd"><label class="weui-label">奖励</label></view>
+          <view class="weui-cell__bd"><input class="weui-input field" type="text" placeholder="实际固定奖励" value="{{rewardForm.actualFixedReward}}" data-field="actualFixedReward" bindinput="onRewardInput" disabled="{{saving || receivingReturn || redeeming || removing}}" /></view>
+        </view>
+        <button class="weui-btn weui-btn_default secondary-button" loading="{{receivingReturn}}" disabled="{{saving || receivingReturn || redeeming || removing}}" bindtap="receiveReward">确认奖励到账</button>
+      </view>
+    </view>
+
+    <view wx:if="{{projectId && isRedeemed}}" class="weui-form redeem">
+      <view class="weui-form__text-area">
+        <view class="weui-form__title">{{redeemTitle}}</view>
+        <view wx:if="{{isRedeemed}}" class="history-warning">更正后会重新计算对应年度的历史统计。</view>
+      </view>
+      <view class="weui-cells weui-cells_form">
+        <view class="weui-cell">
+          <view class="weui-cell__hd"><label class="weui-label">到账日</label></view>
+          <view class="weui-cell__bd">
+            <picker mode="date" value="{{principalForm.redeemDate}}" bindchange="onPrincipalDateChange" disabled="{{saving || receivingReturn || redeeming || removing}}">
+              <view class="picker-field">{{principalDateText}}</view>
+            </picker>
+          </view>
+        </view>
+        <view class="weui-cell">
+          <view class="weui-cell__hd"><label class="weui-label">利息</label></view>
+          <view class="weui-cell__bd"><input class="weui-input field" type="text" placeholder="实际利息" value="{{principalForm.actualInterest}}" data-field="actualInterest" bindinput="onPrincipalInput" disabled="{{saving || receivingReturn || redeeming || removing}}" /></view>
+        </view>
+        <view class="weui-cell">
+          <view class="weui-cell__hd"><label class="weui-label">奖励日</label></view>
+          <view class="weui-cell__bd">
+            <picker mode="date" value="{{rewardForm.rewardReceivedDate}}" bindchange="onRewardDateChange" disabled="{{saving || receivingReturn || redeeming || removing}}">
+              <view class="picker-field">{{rewardDateText}}</view>
+            </picker>
+          </view>
+        </view>
+        <view class="weui-cell">
+          <view class="weui-cell__hd"><label class="weui-label">奖励</label></view>
+          <view class="weui-cell__bd"><input class="weui-input field" type="text" placeholder="实际固定奖励" value="{{rewardForm.actualFixedReward}}" data-field="actualFixedReward" bindinput="onRewardInput" disabled="{{saving || receivingReturn || redeeming || removing}}" /></view>
+        </view>
+      </view>
+      <button class="weui-btn weui-btn_default secondary-button" loading="{{redeeming}}" disabled="{{saving || receivingReturn || redeeming || removing}}" bindtap="redeem">{{redeemButtonText}}</button>
+    </view>
+
+    <view wx:if="{{isLocked}}" class="weui-panel redeemed-note caption">{{lockedMessage}}</view>
+    <button wx:if="{{projectId && canRemove}}" class="weui-btn weui-btn_warn danger-button" loading="{{removing}}" disabled="{{saving || receivingReturn || redeeming || removing}}" bindtap="remove">删除项目</button>
   </block>
 </view>

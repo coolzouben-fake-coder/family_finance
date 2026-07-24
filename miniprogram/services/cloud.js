@@ -32,6 +32,9 @@ function listUsers() { return callCloud('projects', { action: 'listUsers' }); }
 function createProject(project) { return callCloud('projects', { action: 'create', project }); }
 function updateProject(id, project) { return callCloud('projects', { action: 'update', id, project }); }
 function redeemProject(id, redeemData) { return callCloud('projects', { action: 'redeem', id, redeemData }); }
+function receiveReturnProject(id, returnData) { return callCloud('projects', { action: 'receiveReturn', id, returnData }); }
+function receiveRewardProject(id, rewardData) { return callCloud('projects', { action: 'receiveReward', id, rewardData }); }
+function redeemPrincipalProject(id, redeemData) { return callCloud('projects', { action: 'redeemPrincipal', id, redeemData }); }
 function correctRedemption(id, redeemData) { return callCloud('projects', { action: 'correctRedemption', id, redeemData }); }
 function cancelProject(id) { return callCloud('projects', { action: 'cancel', id }); }
 function removeProject(id) { return callCloud('projects', { action: 'remove', id }); }
@@ -39,5 +42,5 @@ function getAnnualStats(year) { return callCloud('stats', { action: 'annual', ye
 
 module.exports = {
   callCloud, getAssets, updateAssets, listAssetChanges, listProjects, listCategories, listUsers, createProject, updateProject,
-  redeemProject, correctRedemption, cancelProject, removeProject, getAnnualStats
+  redeemProject, receiveReturnProject, receiveRewardProject, redeemPrincipalProject, correctRedemption, cancelProject, removeProject, getAnnualStats
 };

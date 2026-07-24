@@ -123,7 +123,9 @@ test('defaults a new project registrant to the caller', async () => {
     .resolves.toEqual({ ok: true, project: expect.objectContaining({
       _id: 'projects-1',
       registrantOpenid: 'allowed-openid',
-      manualStatus: 'active'
+      manualStatus: 'active',
+      principalStatus: 'holding',
+      rewardStatus: 'pending'
     }) });
 
   expect(documents.projects[0]).toEqual(expect.objectContaining({
@@ -131,6 +133,38 @@ test('defaults a new project registrant to the caller', async () => {
     expectedInterest: 23.01,
     fixedReward: 200
   }));
+});
+
+test('creates projects with fixed expected return mode', async () => {
+  await expect(main({ action: 'create', project: {
+    ...project,
+    expectedReturnMode: 'fixedReturn',
+    expectedAnnualRate: '',
+    expectedFixedReturn: 88.8,
+    fixedReward: 12.2
+  } })).resolves.toEqual({ ok: true, project: expect.objectContaining({
+    expectedReturnMode: 'fixedReturn',
+    expectedAnnualRate: 0,
+    expectedFixedReturn: 88.8,
+    expectedInterest: 88.8,
+    fixedReward: 12.2
+  }) });
+});
+
+test('rejects contradictory expected return mode payloads', async () => {
+  await expect(main({ action: 'create', project: {
+    ...project,
+    expectedReturnMode: 'annualRate',
+    expectedAnnualRate: 0.03,
+    expectedFixedReturn: 10
+  } })).rejects.toThrow('EXPECTED_RETURN_MODE_CONFLICT');
+
+  await expect(main({ action: 'create', project: {
+    ...project,
+    expectedReturnMode: 'fixedReturn',
+    expectedAnnualRate: 0.03,
+    expectedFixedReturn: 10
+  } })).rejects.toThrow('EXPECTED_RETURN_MODE_CONFLICT');
 });
 
 test('accepts either enabled family member as registrant and rejects other OpenIDs', async () => {
@@ -204,7 +238,67 @@ test('redeems using the stored start date and rejects dates before it', async ()
     actualFixedReward: 100
   } })).resolves.toEqual({ ok: true, project: expect.objectContaining({
     manualStatus: 'redeemed',
-    redeemDate: '2026-07-28'
+    principalStatus: 'released',
+    rewardStatus: 'received',
+    redeemDate: '2026-07-28',
+    rewardReceivedDate: '2026-07-28'
+  }) });
+});
+
+test('receives reward without releasing active principal', async () => {
+  const created = await main({ action: 'create', project });
+
+  await expect(main({ action: 'receiveReward', id: created.project._id, rewardData: {
+    rewardReceivedDate: '2026-07-20',
+    actualFixedReward: 100
+  } })).resolves.toEqual({ ok: true, project: expect.objectContaining({
+    manualStatus: 'active',
+    principalStatus: 'holding',
+    rewardStatus: 'received',
+    rewardReceivedDate: '2026-07-20',
+    actualFixedReward: 100
+  }) });
+
+  expect(documents.projects[0]).toEqual(expect.objectContaining({
+    manualStatus: 'active',
+    principalStatus: 'holding',
+    rewardStatus: 'received',
+    actualFixedReward: 100
+  }));
+});
+
+test('redeems principal and keeps project incomplete while reward is pending', async () => {
+  const created = await main({ action: 'create', project });
+
+  await expect(main({ action: 'redeemPrincipal', id: created.project._id, redeemData: {
+    redeemDate: '2026-07-28',
+    actualInterest: 20
+  } })).resolves.toEqual({ ok: true, project: expect.objectContaining({
+    manualStatus: 'active',
+    principalStatus: 'released',
+    rewardStatus: 'pending',
+    redeemDate: '2026-07-28',
+    actualInterest: 20
+  }) });
+});
+
+test('completes project after released principal and delayed reward are both received', async () => {
+  const created = await main({ action: 'create', project });
+  await main({ action: 'redeemPrincipal', id: created.project._id, redeemData: {
+    redeemDate: '2026-07-28',
+    actualInterest: 20
+  } });
+
+  await expect(main({ action: 'receiveReward', id: created.project._id, rewardData: {
+    rewardReceivedDate: '2026-08-01',
+    actualFixedReward: 100
+  } })).resolves.toEqual({ ok: true, project: expect.objectContaining({
+    manualStatus: 'redeemed',
+    principalStatus: 'released',
+    rewardStatus: 'received',
+    rewardReceivedDate: '2026-08-01',
+    actualInterest: 20,
+    actualFixedReward: 100
   }) });
 });
 
@@ -218,7 +312,9 @@ test('allows negative actual return components when redeeming a realized loss', 
   } })).resolves.toEqual({ ok: true, project: expect.objectContaining({
     actualInterest: -20,
     actualFixedReward: -100,
-    manualStatus: 'redeemed'
+    manualStatus: 'redeemed',
+    principalStatus: 'released',
+    rewardStatus: 'received'
   }) });
 
   expect(documents.projects[0]).toEqual(expect.objectContaining({
@@ -295,4 +391,16 @@ test('cancels active projects and removes an existing project', async () => {
 
   await expect(main({ action: 'remove', id: created.project._id })).resolves.toEqual({ ok: true });
   expect(documents.projects).toEqual([]);
+});
+
+test('rejects removing redeemed projects', async () => {
+  const created = await main({ action: 'create', project });
+  await main({ action: 'redeem', id: created.project._id, redeemData: {
+    redeemDate: '2026-07-28',
+    actualInterest: 20,
+    actualFixedReward: 100
+  } });
+
+  await expect(main({ action: 'remove', id: created.project._id })).rejects.toThrow('PROJECT_REDEEMED_REMOVE_FORBIDDEN');
+  expect(documents.projects).toHaveLength(1);
 });

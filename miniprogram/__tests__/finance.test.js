@@ -31,4 +31,32 @@ test('summarizes current capital usage from active projects only', () => {
   expect(result.inTransitReturn).toBe(223.01);
   expect(result.realizedReturn).toBe(128);
 });
+
+test('tracks principal and reward settlement independently', () => {
+  const result = summarizeCapital(50000, [
+    {
+      principal: 10000,
+      expectedInterest: 23.01,
+      fixedReward: 200,
+      actualInterest: 20,
+      manualStatus: 'active',
+      principalStatus: 'released',
+      rewardStatus: 'pending'
+    },
+    {
+      principal: 5000,
+      expectedInterest: 10,
+      fixedReward: 20,
+      manualStatus: 'active',
+      principalStatus: 'holding',
+      rewardStatus: 'received',
+      actualFixedReward: 18
+    }
+  ]);
+
+  expect(result.investedAmount).toBe(5000);
+  expect(result.idleAmount).toBe(45000);
+  expect(result.inTransitReturn).toBe(210);
+  expect(result.realizedReturn).toBe(38);
+});
 });

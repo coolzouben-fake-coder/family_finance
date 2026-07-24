@@ -1,22 +1,24 @@
-<view class="card surface" bindtap="onTap">
-  <view class="top">
+<view class="weui-panel card" bindtap="onTap">
+  <view class="weui-cell top">
     <view class="name">{{project.name}}</view>
     <view class="status status-{{project.dateStatus}}">{{project.displayStatus}}</view>
   </view>
-  <view class="row">
-    <text>本金 {{project.principalText}}</text>
-    <text>{{project.dateRange}}</text>
-  </view>
-  <view class="row">
-    <text>预期 {{project.expectedTotalText}}</text>
-    <text>实际 {{project.actualTotalText}}</text>
-  </view>
-  <view class="row">
-    <text>{{project.categoryName}} · {{project.registrantName}}</text>
-    <text>实际年化 {{project.actualAnnualRateText}}</text>
+  <view class="weui-cells card-details">
+    <view class="weui-cell row">
+      <text>本金 {{project.principalText}}</text>
+      <text>{{project.dateRange}}</text>
+    </view>
+    <view class="weui-cell row">
+      <text>预期 {{project.expectedTotalText}}</text>
+      <text>实际 {{project.actualTotalText}}</text>
+    </view>
+    <view class="weui-cell row">
+      <text>{{project.categoryName}} · {{project.registrantName}}</text>
+      <text>实际年化 {{project.actualAnnualRateText}}</text>
+    </view>
   </view>
   <view class="actions">
-    <button wx:if="{{project.manualStatus === 'active'}}" class="card-action card-action--cancel" catchtap="onCancel">取消项目</button>
-    <button class="card-action card-action--remove" catchtap="onRemove">删除</button>
+    <button wx:if="{{project.canCancel}}" class="weui-btn weui-btn_default card-action card-action--cancel" catchtap="onCancel">取消项目</button>
+    <button wx:if="{{project.canRemove}}" class="weui-btn weui-btn_warn card-action card-action--remove" catchtap="onRemove">删除</button>
   </view>
 </view>

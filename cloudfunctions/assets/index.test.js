@@ -137,6 +137,15 @@ test('returns the default asset amount when the singleton does not exist', async
   });
 });
 
+test('returns the default asset amount when cloud sdk reports a missing document message', async () => {
+  documentGetError = new Error('document.get:fail document with _id current does not exist');
+
+  await expect(main({ action: 'get' })).resolves.toEqual({
+    ok: true,
+    asset: { totalAmount: 0 }
+  });
+});
+
 test('deposits into the current family asset and records the change', async () => {
   await expect(main({
     action: 'update',

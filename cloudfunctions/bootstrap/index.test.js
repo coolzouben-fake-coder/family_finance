@@ -97,6 +97,9 @@ test('preserves logical identity for built-in categories', async () => {
   });
   assert.strictEqual(documents.categories['legacy-fund'].createdAt, 'original-created-at');
   assert.strictEqual(documents.categories['legacy-fund'].enabled, true);
+  assert.strictEqual(documents.categories['builtin-yangmao'].sortOrder, 1);
+  assert.strictEqual(documents.categories['builtin-bank-finance'].sortOrder, 2);
+  assert.strictEqual(documents.categories['legacy-fund'].sortOrder, 4);
   assert.strictEqual(documents.settings['legacy-settings'].preserved, true);
   assert.strictEqual(documents.settings.default, undefined);
   assert.strictEqual(writes.filter((write) => write.operation === 'set').length, 8);

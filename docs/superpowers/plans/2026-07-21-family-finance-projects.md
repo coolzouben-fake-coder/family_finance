@@ -2,6 +2,8 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+> **UI update, 2026-07-23:** The early Apple-inspired UI notes in this historical plan have been superseded by Tencent WeUI. Use `docs/ui/weui-style-guide.md` and `miniprogram/styles/weui.wxss` for all current UI work.
+
 **Goal:** Build a WeChat mini program for two family members to track finance projects, current capital usage, idle funds, and realized returns.
 
 **Architecture:** Use native WeChat Mini Program pages for UI, shared JavaScript modules for deterministic finance calculations, and WeChat Cloud Development for authentication, database storage, and server-side permission checks. Keep derived values computed from raw project fields so statistics stay consistent after edits.

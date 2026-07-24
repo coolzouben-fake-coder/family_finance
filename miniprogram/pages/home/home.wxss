@@ -1,7 +1,7 @@
-.header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+.dashboard-hero {
+  margin-top: 0;
+  padding: 32rpx 32rpx 28rpx;
+  background: var(--weui-BG-2);
 }
 
 .title {
@@ -12,75 +12,108 @@
 
 .subtitle {
   margin-top: 12rpx;
-  color: var(--color-secondary-text);
+  color: var(--weui-FG-1);
   font-size: var(--font-body);
+}
+
+.dashboard-panel {
+  margin-top: var(--space-section);
 }
 
 .grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16rpx;
-  margin-top: var(--space-section);
+  padding: 0 24rpx 24rpx;
+}
+
+.metric-grid {
+  margin-top: 0;
 }
 
 .asset-edit-button {
-  margin-top: 16rpx;
-  background: transparent;
-  color: var(--color-accent);
-  font-size: var(--font-caption);
-  line-height: 64rpx;
+  margin-top: var(--space-section);
 }
 
 .asset-editor {
-  margin-top: 16rpx;
-  padding: 24rpx;
-}
-
-.asset-editor .section-title {
-  margin-bottom: 20rpx;
-  font-size: 30rpx;
+  margin-top: var(--space-section);
+  background: var(--weui-BG-2);
 }
 
 .asset-type-control {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8rpx;
-  margin-bottom: 16rpx;
+  gap: 16rpx;
+  margin: 0 32rpx 24rpx;
   padding: 6rpx;
-  border-radius: var(--radius-card);
-  background: var(--color-grouped-background);
+  border-radius: 12rpx;
+  background: var(--weui-BG-1);
 }
 
 .asset-type-button {
-  background: transparent;
-  color: var(--color-secondary-text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 64rpx;
+  min-width: 0;
+  min-height: 64rpx;
+  margin: 0;
+  padding: 0;
+  border-radius: 8rpx;
+  box-sizing: border-box;
+  color: var(--weui-FG-1);
   font-size: var(--font-caption);
   font-weight: 500;
   line-height: 64rpx;
 }
 
+.asset-type-control .weui-btn + .weui-btn {
+  margin-top: 0;
+}
+
+.asset-type-button.weui-btn_default {
+  background: transparent;
+}
+
+.asset-type-button::after {
+  border: 0;
+}
+
 .asset-type-button--active {
-  background: var(--color-accent);
+  background: var(--weui-BRAND);
   color: #FFFFFF;
   font-weight: 700;
-  box-shadow: 0 8rpx 18rpx rgba(0, 122, 255, 0.22);
+  box-shadow: none;
+}
+
+.asset-type-button--active.weui-btn_default {
+  background: var(--weui-BRAND);
+}
+
+.asset-cells {
+  margin-top: 0;
 }
 
 .asset-field {
   width: 100%;
-  min-height: 80rpx;
-  margin-bottom: 16rpx;
-  padding: 0 20rpx;
-  border: 1rpx solid var(--color-separator);
-  border-radius: var(--radius-card);
+  min-height: 48rpx;
+  padding: 0;
+  border: 0;
   box-sizing: border-box;
   font-size: var(--font-body);
+  line-height: 48rpx;
 }
 
 .asset-actions {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16rpx;
+  margin-top: 32rpx;
+}
+
+.asset-actions .weui-btn {
+  margin: 0;
 }
 
 .asset-change-header {
@@ -93,10 +126,6 @@
   display: flex;
   justify-content: space-between;
   gap: 20rpx;
-  margin-bottom: 12rpx;
-  padding: 24rpx;
-  border-radius: var(--radius-card);
-  background: var(--color-grouped-background);
 }
 
 .asset-change-title {
@@ -107,7 +136,7 @@
 
 .asset-change-balance {
   flex-shrink: 0;
-  color: var(--color-secondary-text);
+  color: var(--weui-FG-1);
   font-size: var(--font-caption);
   line-height: 1.6;
   text-align: right;
@@ -116,12 +145,12 @@
 .loading-state,
 .error-state {
   margin-top: var(--space-section);
-  padding: 24rpx;
+  padding: 28rpx 32rpx;
   font-size: var(--font-caption);
 }
 
 .loading-state {
-  color: var(--color-secondary-text);
+  color: var(--weui-FG-1);
 }
 
 .error-state {
@@ -133,25 +162,22 @@
 }
 
 .section-title {
-  margin-bottom: 16rpx;
+  margin-bottom: 0;
 }
 
 .empty,
 .reminder {
-  padding: 24rpx;
-  border-radius: var(--radius-card);
-  background: var(--color-grouped-background);
+  min-height: 88rpx;
 }
 
 .empty {
-  color: var(--color-secondary-text);
+  color: var(--weui-FG-1);
   font-size: var(--font-caption);
 }
 
 .reminder {
   display: flex;
   justify-content: space-between;
-  margin-bottom: 12rpx;
   color: var(--color-primary-text);
   font-size: var(--font-caption);
 }

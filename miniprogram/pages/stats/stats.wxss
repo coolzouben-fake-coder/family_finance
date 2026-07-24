@@ -2,6 +2,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  padding: 28rpx 32rpx;
 }
 
 .year {
@@ -20,7 +21,11 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16rpx;
-  margin-top: 24rpx;
+  padding: 0 24rpx 24rpx;
+}
+
+.stats-panel {
+  margin-top: var(--space-section);
 }
 
 .section {
@@ -28,16 +33,12 @@
 }
 
 .section-title {
-  margin-bottom: 16rpx;
+  margin-bottom: 0;
 }
 
 .row {
   display: flex;
   justify-content: space-between;
-  margin-bottom: 12rpx;
-  padding: 24rpx;
-  border-radius: var(--radius-card);
-  background: var(--color-grouped-background);
   color: var(--color-primary-text);
   font-size: var(--font-body);
 }

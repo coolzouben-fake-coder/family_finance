@@ -29,4 +29,28 @@ describe('date utilities', () => {
     const project = { manualStatus: 'active', startDate: '2026-07-01', endDate: '2026-07-28' };
     expect(getDateStatus(project, '2026-07-29', 3)).toBe('overdue_pending');
   });
+
+  test('treats released principal with pending reward as pending confirmation', () => {
+    const project = {
+      manualStatus: 'active',
+      principalStatus: 'released',
+      rewardStatus: 'pending',
+      startDate: '2026-07-01',
+      endDate: '2026-07-28'
+    };
+
+    expect(getDateStatus(project, '2026-07-29', 3)).toBe('overdue_pending');
+  });
+
+  test('keeps reward-received projects in the principal due-soon queue while principal is holding', () => {
+    const project = {
+      manualStatus: 'active',
+      principalStatus: 'holding',
+      rewardStatus: 'received',
+      startDate: '2026-07-01',
+      endDate: '2026-07-28'
+    };
+
+    expect(getDateStatus(project, '2026-07-26', 3)).toBe('due_soon');
+  });
 });

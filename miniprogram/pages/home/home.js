@@ -1,5 +1,5 @@
 const { ensureAllowedSession } = require('../../services/session');
-const { getAssets, listAssetChanges, listProjects, updateAssets } = require('../../services/cloud');
+const { getAssets, listProjects, updateAssets } = require('../../services/cloud');
 const { summarizeCapital } = require('../../utils/finance');
 const { getDateStatus } = require('../../utils/date');
 
@@ -19,24 +19,6 @@ function percent(value) {
   return `${(Number(value || 0) * 100).toFixed(1)}%`;
 }
 
-function formatAssetChange(change) {
-  const beforeAmount = Number(change.beforeAmount || 0);
-  const afterAmount = Number(change.afterAmount || 0);
-  const inferredAmount = Math.abs(afterAmount - beforeAmount);
-  const type = change.type || (afterAmount >= beforeAmount ? 'deposit' : 'withdraw');
-  const amount = Number(change.amount || inferredAmount);
-  const sign = type === 'withdraw' ? '-' : '+';
-  return {
-    ...change,
-    type,
-    typeLabel: type === 'withdraw' ? '支取' : '存入',
-    amountText: `${sign}${money(amount)}`,
-    beforeText: money(beforeAmount),
-    afterText: money(afterAmount),
-    createdText: typeof change.createdAt === 'string' ? change.createdAt.slice(0, 10) : ''
-  };
-}
-
 function assetTypeClasses(type) {
   return {
     depositTypeClass: type === 'deposit' ? 'asset-type-button--active' : '',
@@ -52,8 +34,6 @@ Page({
     totalAssetsValue: null,
     editingAssets: false,
     savingAssets: false,
-    showingAssetChanges: false,
-    assetChangeToggleText: '查看全部',
     assetChangeType: 'deposit',
     depositTypeClass: 'asset-type-button--active',
     withdrawTypeClass: '',
@@ -68,8 +48,7 @@ Page({
       realizedReturn: '¥0.00'
     },
     dueSoonProjects: [],
-    overdueProjects: [],
-    assetChanges: []
+    overdueProjects: []
   },
 
   onLoad() {
@@ -96,12 +75,10 @@ Page({
     return ensureAllowedSession()
       .then(() => Promise.all([
         getAssets(),
-        listProjects(),
-        listAssetChanges().catch(() => ({ changes: [] }))
+        listProjects()
       ]))
-      .then(([assetResult, projectResult, changeResult]) => {
+      .then(([assetResult, projectResult]) => {
         const projects = projectResult.projects || [];
-        const changes = changeResult.changes || [];
         const summary = summarizeCapital(assetResult.asset.totalAmount, projects);
         const today = todayText();
         const decorated = projects.map((project) => ({
@@ -123,8 +100,7 @@ Page({
             realizedReturn: money(summary.realizedReturn)
           },
           dueSoonProjects: decorated.filter((project) => project.dateStatus === 'due_soon'),
-          overdueProjects: decorated.filter((project) => project.dateStatus === 'overdue_pending'),
-          assetChanges: changes.map(formatAssetChange)
+          overdueProjects: decorated.filter((project) => project.dateStatus === 'overdue_pending')
         });
       })
       .catch(() => {
@@ -161,12 +137,9 @@ Page({
     this.setData({ assetChangeType: type, ...assetTypeClasses(type) });
   },
 
-  toggleAssetChanges() {
-    const showingAssetChanges = !this.data.showingAssetChanges;
-    this.setData({
-      showingAssetChanges,
-      assetChangeToggleText: showingAssetChanges ? '收起' : '查看全部'
-    });
+  openAssetChanges() {
+    if (!this.data.dashboardReady) return;
+    wx.navigateTo({ url: '/pages/asset-changes/asset-changes' });
   },
 
   saveAssets() {

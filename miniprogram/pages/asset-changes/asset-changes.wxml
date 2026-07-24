@@ -1,0 +1,21 @@
+<view class="page">
+  <view class="weui-panel">
+    <view class="weui-panel__hd">调整记录</view>
+    <view wx:if="{{loading}}" class="weui-cell empty">正在加载调整记录</view>
+    <view wx:elif="{{errorMessage}}" class="weui-cell error-state">{{errorMessage}}</view>
+    <view wx:else class="weui-cells">
+      <view wx:if="{{changes.length === 0}}" class="weui-cell empty">暂无调整记录</view>
+      <view wx:for="{{changes}}" wx:key="_id" class="weui-cell asset-change-row">
+        <view class="weui-cell__bd">
+          <view class="asset-change-title">{{item.typeLabel}} {{item.amountText}}</view>
+          <view class="caption">{{item.reason}}</view>
+          <view class="caption">{{item.createdText}}</view>
+        </view>
+        <view class="weui-cell__ft asset-change-balance">
+          <view>{{item.beforeText}}</view>
+          <view>{{item.afterText}}</view>
+        </view>
+      </view>
+    </view>
+  </view>
+</view>

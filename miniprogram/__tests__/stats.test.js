@@ -2,12 +2,14 @@ const mockEnsureAllowedSession = jest.fn();
 const mockGetAnnualStats = jest.fn();
 const mockListCategories = jest.fn();
 const mockListUsers = jest.fn();
+const mockListProjects = jest.fn();
 
 jest.mock('../services/session', () => ({ ensureAllowedSession: mockEnsureAllowedSession }));
 jest.mock('../services/cloud', () => ({
   getAnnualStats: mockGetAnnualStats,
   listCategories: mockListCategories,
-  listUsers: mockListUsers
+  listUsers: mockListUsers,
+  listProjects: mockListProjects
 }));
 
 let pageDefinition;
@@ -17,7 +19,7 @@ function createPage() {
     data: JSON.parse(JSON.stringify(pageDefinition.data)),
     setData(update) { this.data = { ...this.data, ...update }; }
   };
-  ['onLoad', 'loadStats', 'onYearChange'].forEach((method) => {
+  ['onLoad', 'loadYearBounds', 'loadStats', 'onYearChange'].forEach((method) => {
     page[method] = pageDefinition[method].bind(page);
   });
   return page;
@@ -38,11 +40,17 @@ describe('annual statistics page', () => {
     mockEnsureAllowedSession.mockResolvedValue({ openid: 'allowed-openid' });
     mockListCategories.mockResolvedValue({ categories: [{ _id: 'cat-1', name: '银行理财' }] });
     mockListUsers.mockResolvedValue({ users: [{ openid: 'allowed-openid', nickname: '成员一' }] });
+    mockListProjects.mockResolvedValue({ projects: [
+      { _id: 'old', startDate: '2025-12-26' },
+      { _id: 'current', startDate: '2026-07-01' }
+    ] });
     mockGetAnnualStats.mockResolvedValue({ stats: {
       totalReturn: 120,
       actualInterestTotal: 90,
       actualFixedRewardTotal: 30,
       annualizedRate: 0.12,
+      familyAssetReturnRate: 0.006,
+      averageFamilyAssets: 20000,
       interestShare: 0.75,
       fixedRewardShare: 0.25,
       monthly: [{ month: '2026-07', amount: 120 }],
@@ -73,6 +81,8 @@ describe('annual statistics page', () => {
       { key: 'interest', label: '实际利息', amountText: '¥90.00', shareText: '75.00%' },
       { key: 'fixedReward', label: '实际固定奖励', amountText: '¥30.00', shareText: '25.00%' }
     ]);
+    expect(page.data.familyAssetReturnRate).toBe('0.60%');
+    expect(page.data.averageFamilyAssets).toBe('¥20000.00');
     expect(page.data.byRegistrant).toEqual([expect.objectContaining({ registrantName: '成员一', annualizedRateText: '12.00%' })]);
     expect(page.data.loading).toBe(false);
   });
@@ -83,6 +93,11 @@ describe('annual statistics page', () => {
     expect(markup).toContain('收益构成');
     expect(markup).toContain('{{item.shareText}}');
     expect(markup).toContain('品类收益占比');
+    expect(markup).toContain('家庭资产收益率');
+    expect(markup).toContain('日均家庭总资产');
+    expect(markup).toContain('weui-panel');
+    expect(markup).toContain('weui-cells');
+    expect(markup).toContain('weui-cell');
   });
 
   test('reloads annual statistics when the selected year changes', async () => {
@@ -91,8 +106,25 @@ describe('annual statistics page', () => {
     page.onYearChange({ detail: { value: '2025' } });
     await flushPromises();
 
-    expect(page.data.year).toBe(2025);
+    expect(page.data.year).toBe('2025');
     expect(mockGetAnnualStats).toHaveBeenCalledWith(2025);
+  });
+
+  test('defaults the year picker to the current year while allowing historical project years', async () => {
+    const markup = require('fs').readFileSync(require('path').join(__dirname, '../pages/stats/stats.wxml'), 'utf8');
+    const page = createPage();
+
+    page.onLoad();
+    await flushPromises();
+    await flushPromises();
+
+    expect(page.data.currentYear).toBe('2026');
+    expect(page.data.year).toBe('2026');
+    expect(page.data.startYear).toBe('2025');
+    expect(markup).toContain('fields="year"');
+    expect(markup).toContain('value="{{year}}"');
+    expect(markup).toContain('start="{{startYear}}"');
+    expect(markup).toContain('end="{{currentYear}}"');
   });
 
   test('shows a page-level error when annual statistics fail to load', async () => {

@@ -17,7 +17,7 @@
 - Realized return is redeemed `actualInterest + actualFixedReward`.
 - Deleting any project removes its principal and returns from realtime stats.
 - Date fields use WeChat `<picker mode="date">`.
-- Keep the existing Apple-like quiet UI style and restored field proportions.
+- Keep the current WeUI/微信原生 UI style and restored field proportions.
 
 ---
 

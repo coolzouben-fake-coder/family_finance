@@ -1,8 +1,6 @@
 .denied {
-  display: flex;
   min-height: 100vh;
-  flex-direction: column;
-  justify-content: center;
+  padding-top: 30vh;
 }
 
 .title {

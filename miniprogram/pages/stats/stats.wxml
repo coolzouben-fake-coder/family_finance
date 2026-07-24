@@ -1,57 +1,70 @@
 <view class="page">
-  <picker mode="date" fields="year" value="{{year}}" bindchange="onYearChange">
-    <view class="year-selector">
+  <picker mode="date" fields="year" value="{{year}}" start="{{startYear}}" end="{{currentYear}}" bindchange="onYearChange">
+    <view class="weui-panel year-selector">
       <text class="year">{{year}}</text>
       <text class="year-action">选择年份</text>
     </view>
   </picker>
 
-  <view wx:if="{{loading}}" class="state surface caption">正在加载收益统计</view>
-  <view wx:elif="{{errorMessage}}" class="state error-state surface">{{errorMessage}}</view>
+  <view wx:if="{{loading}}" class="weui-panel state caption">正在加载收益统计</view>
+  <view wx:elif="{{errorMessage}}" class="weui-panel state error-state">{{errorMessage}}</view>
   <block wx:else>
-    <view class="grid">
-      <metric-card label="年度总收益" value="{{totalReturn}}" />
-      <metric-card label="年度实际年化" value="{{annualizedRate}}" />
-      <metric-card label="固定奖励占比" value="{{fixedRewardShare}}" />
+    <view class="weui-panel stats-panel">
+      <view class="weui-panel__hd">年度概览</view>
+      <view class="grid">
+        <metric-card label="年度总收益" value="{{totalReturn}}" />
+        <metric-card label="年度实际年化" value="{{annualizedRate}}" />
+        <metric-card label="家庭资产收益率" value="{{familyAssetReturnRate}}" />
+        <metric-card label="日均家庭总资产" value="{{averageFamilyAssets}}" />
+        <metric-card label="固定奖励占比" value="{{fixedRewardShare}}" />
+      </view>
     </view>
 
-    <view class="section">
-      <view class="section-title">收益构成</view>
-      <view wx:for="{{returnBreakdown}}" wx:key="key" class="row">
-        <text>{{item.label}}</text>
-        <view class="row-values">
+    <view class="weui-panel section">
+      <view class="weui-panel__hd section-title">收益构成</view>
+      <view class="weui-cells">
+        <view wx:for="{{returnBreakdown}}" wx:key="key" class="weui-cell row">
+          <text>{{item.label}}</text>
+          <view class="row-values">
+            <text>{{item.amountText}}</text>
+            <text class="caption">占比 {{item.shareText}}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <view class="weui-panel section">
+      <view class="weui-panel__hd section-title">月度收益</view>
+      <view class="weui-cells">
+        <view wx:for="{{monthly}}" wx:key="month" class="weui-cell row">
+          <text>{{item.month}}</text>
           <text>{{item.amountText}}</text>
-          <text class="caption">占比 {{item.shareText}}</text>
         </view>
       </view>
     </view>
 
-    <view class="section">
-      <view class="section-title">月度收益</view>
-      <view wx:for="{{monthly}}" wx:key="month" class="row">
-        <text>{{item.month}}</text>
-        <text>{{item.amountText}}</text>
-      </view>
-    </view>
-
-    <view class="section">
-      <view class="section-title">品类收益占比</view>
-      <view wx:for="{{byCategory}}" wx:key="categoryId" class="row">
-        <text>{{item.categoryName}}</text>
-        <view class="row-values">
-          <text>{{item.actualTotalReturnText}}</text>
-          <text class="caption">占比 {{item.shareText}}</text>
+    <view class="weui-panel section">
+      <view class="weui-panel__hd section-title">品类收益占比</view>
+      <view class="weui-cells">
+        <view wx:for="{{byCategory}}" wx:key="categoryId" class="weui-cell row">
+          <text>{{item.categoryName}}</text>
+          <view class="row-values">
+            <text>{{item.actualTotalReturnText}}</text>
+            <text class="caption">占比 {{item.shareText}}</text>
+          </view>
         </view>
       </view>
     </view>
 
-    <view class="section">
-      <view class="section-title">登记人汇总</view>
-      <view wx:for="{{byRegistrant}}" wx:key="registrantOpenid" class="row">
-        <text>{{item.registrantName}}</text>
-        <view class="row-values">
-          <text>{{item.actualTotalReturnText}}</text>
-          <text class="caption">年化 {{item.annualizedRateText}}</text>
+    <view class="weui-panel section">
+      <view class="weui-panel__hd section-title">登记人汇总</view>
+      <view class="weui-cells">
+        <view wx:for="{{byRegistrant}}" wx:key="registrantOpenid" class="weui-cell row">
+          <text>{{item.registrantName}}</text>
+          <view class="row-values">
+            <text>{{item.actualTotalReturnText}}</text>
+            <text class="caption">年化 {{item.annualizedRateText}}</text>
+          </view>
         </view>
       </view>
     </view>
