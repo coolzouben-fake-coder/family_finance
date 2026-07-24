@@ -119,6 +119,21 @@ jobs:
           PREVIEW_DESC: ${{ steps.preview.outputs.desc }}
         run: npm run ci:upload-preview
 
+      - name: Generate WeChat preview QR
+        id: generate_qr
+        env:
+          PREVIEW_QR_PATH: ${{ runner.temp }}/wechat-preview-qrcode.png
+        run: npm run ci:generate-preview-qr
+
+      - name: Upload WeChat preview QR artifact
+        id: upload_qr
+        uses: actions/upload-artifact@v4
+        with:
+          name: wechat-preview-qrcode
+          path: ${{ runner.temp }}/wechat-preview-qrcode.png
+          if-no-files-found: error
+          retention-days: 7
+
       - name: Clean up WeChat upload key
         if: always()
         run: rm -f -- "$RUNNER_TEMP/wechat-upload.key"
@@ -132,13 +147,15 @@ jobs:
           DEPLOY_OUTCOME: ${{ steps.deploy_functions.outcome || 'skipped' }}
           PREVIEW_VERSION: ${{ steps.preview.outputs.version || 'not uploaded' }}
           UPLOAD_OUTCOME: ${{ steps.upload.outcome || 'skipped' }}
+          QR_GENERATION_OUTCOME: ${{ steps.generate_qr.outcome || 'skipped' }}
+          QR_ARTIFACT_UPLOAD_OUTCOME: ${{ steps.upload_qr.outcome || 'skipped' }}
         run: |
           set -euo pipefail
           {
             printf '## WeChat preview deployment\n\n'
             printf -- '- Commit: `%s`\n' "$GITHUB_SHA"
-            printf -- '- Preview version: `%s`\n' "$PREVIEW_VERSION"
-            printf -- '- Preview upload: `%s`\n\n' "$UPLOAD_OUTCOME"
+            printf -- '- Development version upload: `%s` (`%s`)\n' "$PREVIEW_VERSION" "$UPLOAD_OUTCOME"
+            printf -- '- Preview QR: available as the `wechat-preview-qrcode` artifact only when QR generation and artifact upload both succeeded (generation: `%s`; artifact upload: `%s`).\n\n' "$QR_GENERATION_OUTCOME" "$QR_ARTIFACT_UPLOAD_OUTCOME"
             printf '### Cloud functions deployed\n\n'
 
             if [[ "$DETECTION_OUTCOME" != "success" ]]; then

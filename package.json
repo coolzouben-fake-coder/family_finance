@@ -6,7 +6,8 @@
     "test": "jest",
     "test:unit": "jest miniprogram/__tests__ cloudfunctions/__tests__",
     "ci:detect-functions": "node scripts/detect-changed-functions.js",
-    "ci:upload-preview": "node scripts/upload-preview.js"
+    "ci:upload-preview": "node scripts/upload-preview.js",
+    "ci:generate-preview-qr": "node -e \"require('./scripts/upload-preview').generatePreviewQr().catch(error => { console.error(error.message); process.exitCode = 1 })\""
   },
   "jest": {
     "moduleNameMapper": {

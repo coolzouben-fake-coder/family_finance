@@ -43,6 +43,29 @@ async function uploadPreview(options = {}) {
   })
 }
 
+async function generatePreviewQr(options = {}) {
+  const env = options.env || process.env
+  const privateKeyPath = requiredEnv(env, 'WECHAT_PRIVATE_KEY_PATH')
+  const desc = requiredEnv(env, 'PREVIEW_DESC')
+  const qrcodeOutputDest = requiredEnv(env, 'PREVIEW_QR_PATH')
+  const project = new ci.Project({
+    appid: APP_ID,
+    type: 'miniProgram',
+    projectPath: path.resolve(__dirname, '..'),
+    privateKeyPath,
+    ignores: ['node_modules/**/*', 'cloudfunctions/**/*', 'docs/**/*']
+  })
+
+  await ci.preview({
+    project,
+    desc,
+    setting: { es6: true, minify: true, codeProtect: false },
+    qrcodeFormat: 'image',
+    qrcodeOutputDest,
+    onProgressUpdate: console.log
+  })
+}
+
 if (require.main === module) {
   uploadPreview().catch(error => {
     console.error(error.message)
@@ -50,4 +73,4 @@ if (require.main === module) {
   })
 }
 
-module.exports = { buildUploadMetadata, requiredEnv, uploadPreview }
+module.exports = { buildUploadMetadata, generatePreviewQr, requiredEnv, uploadPreview }

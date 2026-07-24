@@ -85,3 +85,15 @@ GitHub Actions 使用以下 Repository Secrets：
 - 不自动删除线上云函数。
 - 不部署未发生变化的云函数。
 - 不把任何凭证提交到 GitHub 仓库。
+
+## 预览二维码扩展
+
+小程序开发版本上传成功后，流水线调用 `miniprogram-ci.preview()` 生成 PNG
+预览二维码。二维码保存到 Runner 临时目录，并通过
+`actions/upload-artifact` 上传为 `wechat-preview-qrcode` Artifact。
+
+- 二维码生成失败时流水线失败，不把没有二维码的运行报告为完整成功。
+- Artifact 保留 7 天，不把上传私钥包含在 Artifact 中。
+- 私钥清理步骤仍使用 `if: always()`，覆盖二维码生成或 Artifact 上传失败。
+- 每次协作开发完成后，助手等待 Actions 运行结束，下载该 Artifact，并在聊天中返回 PNG。
+- 二维码的扫码权限由微信小程序成员配置决定；不把它描述为公众平台“体验版”。
