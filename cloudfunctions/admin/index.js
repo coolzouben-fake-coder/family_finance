@@ -16,7 +16,7 @@ function requireAdmin() {
   return openid;
 }
 
-function requireCollection(name, { writable = false } = {}) {
+function requireCollection(name) {
   const allowed = CRUD_COLLECTIONS.includes(name);
   if (!allowed) throw new Error('COLLECTION_NOT_ALLOWED');
   return name;
@@ -92,7 +92,7 @@ function requireWriteData(data) {
 }
 
 async function writeDocument(event) {
-  const collectionName = requireCollection(event.collection, { writable: true });
+  const collectionName = requireCollection(event.collection);
   const data = event.action === 'remove' ? undefined : requireWriteData(event.data);
   const target = db.collection(collectionName);
 
