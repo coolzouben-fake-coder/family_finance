@@ -14,6 +14,7 @@ test('deploys validated changed functions sequentially with the pinned CloudBase
     'npm install --no-save @cloudbase/cli@3.6.4 miniprogram-ci@2.1.31'
   )
   expect(workflow).toContain('CHANGED_FUNCTIONS must be a JSON array')
+  expect(workflow).toContain('npx tcb login --apiKeyId "$TENCENTCLOUD_SECRETID" --apiKey "$TENCENTCLOUD_SECRETKEY"')
   expect(workflow).toContain('for function_name in "${changed_functions[@]}"; do')
   expect(workflow).toContain('npx tcb fn deploy "$function_name" --env-id cloudbase-d7gx0ikiwa58549a4 --yes')
   expect(workflow).not.toContain(' fn delete ')

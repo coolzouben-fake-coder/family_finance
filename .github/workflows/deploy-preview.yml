@@ -91,6 +91,7 @@ jobs:
               console.log(functionName)
             }
           ')
+          npx tcb login --apiKeyId "$TENCENTCLOUD_SECRETID" --apiKey "$TENCENTCLOUD_SECRETKEY"
           : > "$RUNNER_TEMP/deployed-functions.txt"
           for function_name in "${changed_functions[@]}"; do
             npx tcb fn deploy "$function_name" --env-id cloudbase-d7gx0ikiwa58549a4 --yes
