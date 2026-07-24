@@ -4,7 +4,9 @@
   "private": true,
   "scripts": {
     "test": "jest",
-    "test:unit": "jest miniprogram/__tests__ cloudfunctions/__tests__"
+    "test:unit": "jest miniprogram/__tests__ cloudfunctions/__tests__",
+    "ci:detect-functions": "node scripts/detect-changed-functions.js",
+    "ci:upload-preview": "node scripts/upload-preview.js"
   },
   "jest": {
     "moduleNameMapper": {

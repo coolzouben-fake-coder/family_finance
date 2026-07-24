@@ -17,6 +17,16 @@
       "name": "stats",
       "runtime": "Nodejs16.13",
       "handler": "index.main"
+    },
+    {
+      "name": "bootstrap",
+      "runtime": "Nodejs16.13",
+      "handler": "index.main"
+    },
+    {
+      "name": "login",
+      "runtime": "Nodejs16.13",
+      "handler": "index.main"
     }
   ]
 }
