@@ -28,10 +28,15 @@ test('publishes the generated preview QR artifact after upload and before key cl
   const generateQrIndex = workflow.indexOf('name: Generate WeChat preview QR')
   const uploadArtifactIndex = workflow.indexOf('name: Upload WeChat preview QR artifact')
   const cleanupIndex = workflow.indexOf('name: Clean up WeChat upload key')
+  const generateQrStep = workflow.slice(generateQrIndex, uploadArtifactIndex)
 
   expect(generateQrIndex).toBeGreaterThan(uploadIndex)
   expect(uploadArtifactIndex).toBeGreaterThan(generateQrIndex)
   expect(cleanupIndex).toBeGreaterThan(uploadArtifactIndex)
+  expect(generateQrStep).toContain(
+    'WECHAT_PRIVATE_KEY_PATH: ${{ runner.temp }}/wechat-upload.key'
+  )
+  expect(generateQrStep).toContain('PREVIEW_DESC: ${{ steps.preview.outputs.desc }}')
   expect(workflow).toContain('PREVIEW_QR_PATH: ${{ runner.temp }}/wechat-preview-qrcode.png')
   expect(workflow).toContain('run: npm run ci:generate-preview-qr')
   expect(workflow).toContain('uses: actions/upload-artifact@v4')
