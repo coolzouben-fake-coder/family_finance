@@ -1,15 +1,17 @@
 const mockProject = { kind: 'project' }
 const mockProjectConstructor = jest.fn(() => mockProject)
 const mockUpload = jest.fn(() => Promise.resolve())
+const mockPreview = jest.fn(() => Promise.resolve())
 const path = require('path')
 
-jest.mock('miniprogram-ci', () => ({ Project: mockProjectConstructor, upload: mockUpload }), { virtual: true })
+jest.mock('miniprogram-ci', () => ({ Project: mockProjectConstructor, upload: mockUpload, preview: mockPreview }), { virtual: true })
 
-const { buildUploadMetadata, requiredEnv, uploadPreview } = require('../upload-preview')
+const { buildUploadMetadata, generatePreviewQr, requiredEnv, uploadPreview } = require('../upload-preview')
 
 beforeEach(() => {
   mockProjectConstructor.mockClear()
   mockUpload.mockClear()
+  mockPreview.mockClear()
 })
 
 test('builds traceable upload metadata', () => {
@@ -61,4 +63,23 @@ test('requires the prepared preview version and description for upload', async (
       GITHUB_SHA: '1234567890abcdef'
     }
   })).rejects.toThrow('PREVIEW_VERSION')
+})
+
+test('generates a preview QR image at the configured path', async () => {
+  await generatePreviewQr({
+    env: {
+      WECHAT_PRIVATE_KEY_PATH: '/tmp/wechat-private.key',
+      PREVIEW_DESC: '1234567 feat: prepared before midnight',
+      PREVIEW_QR_PATH: '/tmp/preview-qr.png'
+    }
+  })
+
+  expect(mockPreview).toHaveBeenCalledWith({
+    project: mockProject,
+    desc: '1234567 feat: prepared before midnight',
+    setting: { es6: true, minify: true, codeProtect: false },
+    qrcodeFormat: 'image',
+    qrcodeOutputDest: '/tmp/preview-qr.png',
+    onProgressUpdate: console.log
+  })
 })
