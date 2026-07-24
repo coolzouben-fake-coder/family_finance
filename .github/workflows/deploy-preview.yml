@@ -122,6 +122,8 @@ jobs:
       - name: Generate WeChat preview QR
         id: generate_qr
         env:
+          WECHAT_PRIVATE_KEY_PATH: ${{ runner.temp }}/wechat-upload.key
+          PREVIEW_DESC: ${{ steps.preview.outputs.desc }}
           PREVIEW_QR_PATH: ${{ runner.temp }}/wechat-preview-qrcode.png
         run: npm run ci:generate-preview-qr
 
