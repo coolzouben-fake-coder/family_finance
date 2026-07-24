@@ -5,7 +5,8 @@
     "pages/projects/projects",
     "pages/project-form/project-form",
     "pages/stats/stats",
-    "pages/auth-denied/auth-denied"
+    "pages/auth-denied/auth-denied",
+    "pages/admin/admin"
   ],
   "window": {
     "navigationBarTitleText": "家庭理财",

@@ -17,10 +17,11 @@ test('only accepts cloud functions registered in cloudbaserc', () => {
   expect(detectChangedFunctions([
     'M\tcloudfunctions/bootstrap/index.js',
     'M\tcloudfunctions/login/index.js',
+    'A\tcloudfunctions/admin/index.js',
     'M\tcloudfunctions/__tests__/permissions.test.js',
     'M\tcloudfunctions/unregistered/index.js'
   ])).toEqual({
-    changed: ['bootstrap', 'login'],
+    changed: ['admin', 'bootstrap', 'login'],
     deleted: []
   })
 })

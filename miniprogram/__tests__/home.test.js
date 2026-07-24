@@ -27,6 +27,7 @@ function createHomePage() {
   page.saveAssets = pageDefinition.saveAssets.bind(page);
   page.onAssetTypeChange = pageDefinition.onAssetTypeChange.bind(page);
   page.openAssetChanges = pageDefinition.openAssetChanges.bind(page);
+  page.openAdmin = pageDefinition.openAdmin.bind(page);
   return page;
 }
 
@@ -289,6 +290,14 @@ describe('home dashboard', () => {
     page.openAssetChanges();
 
     expect(global.wx.navigateTo).toHaveBeenCalledWith({ url: '/pages/asset-changes/asset-changes' });
+  });
+
+  test('opens the hidden admin console from the home title gesture', () => {
+    const page = createHomePage();
+
+    page.openAdmin();
+
+    expect(global.wx.navigateTo).toHaveBeenCalledWith({ url: '/pages/admin/admin' });
   });
 
   test('keeps home markup free of ternary expressions for stable mini-program compilation', () => {

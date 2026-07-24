@@ -142,6 +142,10 @@ Page({
     wx.navigateTo({ url: '/pages/asset-changes/asset-changes' });
   },
 
+  openAdmin() {
+    wx.navigateTo({ url: '/pages/admin/admin' });
+  },
+
   saveAssets() {
     if (!this.data.dashboardReady || this.data.loading || this.data.savingAssets) return;
     const amount = Number(this.data.assetAmountInput);

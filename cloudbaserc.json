@@ -27,6 +27,11 @@
       "name": "login",
       "runtime": "Nodejs16.13",
       "handler": "index.main"
+    },
+    {
+      "name": "admin",
+      "runtime": "Nodejs16.13",
+      "handler": "index.main"
     }
   ]
 }

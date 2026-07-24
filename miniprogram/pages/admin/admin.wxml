@@ -1,0 +1,90 @@
+<view class="page admin-page">
+  <view wx:if="{{checking}}" class="weui-panel state-panel">正在验证管理员权限</view>
+  <view wx:elif="{{authorized === false}}" class="weui-msg denied">
+    <view class="weui-msg__text-area">
+      <view class="weui-msg__title">无管理员权限</view>
+      <view class="weui-msg__desc">{{errorMessage}}</view>
+    </view>
+  </view>
+  <view wx:elif="{{authorized === null}}" class="weui-msg load-error">
+    <view class="weui-msg__text-area">
+      <view class="weui-msg__title">权限验证失败</view>
+      <view class="weui-msg__desc">{{errorMessage}}</view>
+    </view>
+    <button class="weui-btn weui-btn_primary" disabled="{{saving || checking}}" bindtap="loadConsole">重试</button>
+  </view>
+  <block wx:else>
+    <view class="weui-panel query-panel">
+      <view class="weui-panel__hd">数据集合</view>
+      <view class="weui-cells weui-cells_form">
+        <picker mode="selector" range="{{collections}}" disabled="{{saving}}" bindchange="onCollectionChange">
+          <view class="weui-cell weui-cell_access">
+            <view class="weui-cell__bd">{{selectedCollection}}</view>
+            <view class="weui-cell__ft">切换</view>
+          </view>
+        </picker>
+        <view class="weui-cell">
+          <view class="weui-cell__hd"><label class="weui-label">文档 ID</label></view>
+          <view class="weui-cell__bd">
+            <input class="weui-input" value="{{documentId}}" placeholder="精确查询，可留空" bindinput="onDocumentIdInput" disabled="{{saving}}" />
+          </view>
+        </view>
+        <view class="weui-cell">
+          <view class="weui-cell__hd"><label class="weui-label">关键词</label></view>
+          <view class="weui-cell__bd">
+            <input class="weui-input" value="{{keyword}}" placeholder="projects 按名称查询" bindinput="onKeywordInput" disabled="{{saving}}" />
+          </view>
+        </view>
+      </view>
+      <button class="weui-btn weui-btn_primary query-button" loading="{{loading}}" disabled="{{saving}}" bindtap="queryDocuments">查询</button>
+    </view>
+
+    <view wx:if="{{errorMessage}}" class="weui-panel error-panel">
+      <view>{{errorMessage}}</view>
+      <button class="retry-button" disabled="{{saving || checking}}" bindtap="loadConsole">重试加载</button>
+    </view>
+
+    <view class="weui-panel results-panel">
+      <view class="weui-panel__hd">查询结果（{{documents.length}}）</view>
+      <view class="weui-cells">
+        <view wx:if="{{documents.length === 0}}" class="weui-cell empty">暂无数据</view>
+        <view wx:for="{{documents}}" wx:key="_id" class="weui-cell weui-cell_access result-row"
+          data-id="{{item._id}}" bindtap="selectDocument">
+          <view class="weui-cell__bd">
+            <view class="result-id">{{item._id}}</view>
+            <view class="result-preview">{{item.name || item.openid || item.action || 'JSON 文档'}}</view>
+          </view>
+          <view class="weui-cell__ft">编辑</view>
+        </view>
+      </view>
+    </view>
+
+    <view class="weui-form editor-panel">
+      <view class="weui-form__text-area">
+        <view class="weui-form__title">JSON 编辑器</view>
+        <view class="weui-form__desc">{{selectedId || '新建文档'}}</view>
+      </view>
+      <view class="weui-cells weui-cells_form">
+        <view class="weui-cell">
+          <view class="weui-cell__bd">
+            <textarea class="json-editor" value="{{editorText}}" bindinput="onEditorInput"
+              disabled="{{saving || !selectedCollectionWritable}}" />
+          </view>
+        </view>
+      </view>
+      <view wx:if="{{selectedCollectionWritable}}" class="editor-actions">
+        <button class="weui-btn weui-btn_default" bindtap="startCreate" disabled="{{saving}}">新建</button>
+        <button wx:if="{{editorMode === 'create'}}"
+          class="weui-btn weui-btn_primary" bindtap="createDocument" loading="{{saving}}"
+          disabled="{{saving}}">创建</button>
+        <button wx:if="{{editorMode === 'edit'}}"
+          class="weui-btn weui-btn_primary" bindtap="updateDocument" loading="{{saving}}"
+          disabled="{{saving}}">局部更新</button>
+        <button wx:if="{{editorMode === 'edit'}}"
+          class="weui-btn weui-btn_warn" bindtap="setDocument" disabled="{{saving}}">完整覆盖</button>
+        <button wx:if="{{editorMode === 'edit'}}"
+          class="weui-btn weui-btn_warn" bindtap="removeDocument" disabled="{{saving}}">删除</button>
+      </view>
+    </view>
+  </block>
+</view>

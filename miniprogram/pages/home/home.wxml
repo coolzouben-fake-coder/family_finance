@@ -1,7 +1,7 @@
 <view class="page">
   <view class="weui-panel dashboard-hero">
     <view>
-      <view class="title">家庭理财</view>
+      <view class="title" bindlongpress="openAdmin">家庭理财</view>
       <view class="subtitle">当前资金状态与项目到期提醒</view>
     </view>
   </view>

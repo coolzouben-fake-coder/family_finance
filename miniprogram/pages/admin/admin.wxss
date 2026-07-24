@@ -1,0 +1,19 @@
+.admin-page { padding-left: var(--space-page-x); padding-right: var(--space-page-x); }
+.query-panel, .results-panel, .editor-panel, .error-panel { margin-bottom: var(--space-section); }
+.query-button { margin: 24rpx var(--space-page-x); }
+.state-panel, .error-panel, .empty { padding: 32rpx; text-align: center; }
+.error-panel { color: var(--color-danger); }
+.denied { min-height: 70vh; padding-top: 24vh; }
+.result-row { align-items: flex-start; }
+.result-id { word-break: break-all; font-size: var(--font-body); }
+.result-preview { margin-top: 8rpx; color: var(--color-secondary-text); font-size: var(--font-caption); }
+.json-editor {
+  width: 100%;
+  min-height: 520rpx;
+  box-sizing: border-box;
+  font-family: Menlo, Consolas, monospace;
+  font-size: 24rpx;
+  line-height: 1.5;
+}
+.editor-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16rpx; padding: 24rpx; }
+.editor-actions .weui-btn { width: 100%; margin: 0; }
