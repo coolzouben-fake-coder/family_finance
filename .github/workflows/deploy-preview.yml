@@ -1,0 +1,170 @@
+name: Deploy WeChat Preview
+
+on:
+  push:
+    branches: [feature/family-finance-projects]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: wechat-preview-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  deploy-preview:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Validate repository secrets
+        env:
+          WECHAT_PRIVATE_KEY: ${{ secrets.WECHAT_PRIVATE_KEY }}
+          TENCENT_SECRET_ID: ${{ secrets.TENCENT_SECRET_ID }}
+          TENCENT_SECRET_KEY: ${{ secrets.TENCENT_SECRET_KEY }}
+        run: |
+          set -euo pipefail
+          missing=()
+          [[ -n "$WECHAT_PRIVATE_KEY" ]] || missing+=("WECHAT_PRIVATE_KEY")
+          [[ -n "$TENCENT_SECRET_ID" ]] || missing+=("TENCENT_SECRET_ID")
+          [[ -n "$TENCENT_SECRET_KEY" ]] || missing+=("TENCENT_SECRET_KEY")
+
+          if (( ${#missing[@]} > 0 )); then
+            printf '::error::Missing required repository secret(s): %s\n' "${missing[*]}"
+            exit 1
+          fi
+
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: |
+          npm ci
+          npm install --no-save @cloudbase/cli@3.6.4 miniprogram-ci@2.1.31
+
+      - name: Run tests
+        run: npm test -- --runInBand
+
+      - name: Detect changed cloud functions
+        id: functions
+        env:
+          BEFORE_SHA: ${{ github.event.before || '' }}
+        run: |
+          set -euo pipefail
+          npm run ci:detect-functions -- \
+            --before "$BEFORE_SHA" \
+            --after "$GITHUB_SHA"
+
+      - name: Deploy changed cloud functions
+        id: deploy_functions
+        if: github.event_name == 'push' && steps.functions.outputs.changed != '[]'
+        env:
+          CHANGED_FUNCTIONS: ${{ steps.functions.outputs.changed }}
+          TENCENTCLOUD_SECRETID: ${{ secrets.TENCENT_SECRET_ID }}
+          TENCENTCLOUD_SECRETKEY: ${{ secrets.TENCENT_SECRET_KEY }}
+        run: |
+          set -euo pipefail
+          node -e '
+            let functions
+            try {
+              functions = JSON.parse(process.env.CHANGED_FUNCTIONS)
+            } catch (_error) {
+              throw new Error("CHANGED_FUNCTIONS must be a JSON array")
+            }
+            if (!Array.isArray(functions) || functions.some(name => (
+              typeof name !== "string" || !/^[A-Za-z0-9_-]+$/.test(name)
+            ))) {
+              throw new Error("CHANGED_FUNCTIONS must be a JSON array")
+            }
+          '
+
+          mapfile -t changed_functions < <(node -e '
+            for (const functionName of JSON.parse(process.env.CHANGED_FUNCTIONS)) {
+              console.log(functionName)
+            }
+          ')
+          : > "$RUNNER_TEMP/deployed-functions.txt"
+          for function_name in "${changed_functions[@]}"; do
+            npx tcb fn deploy "$function_name" --env-id cloudbase-d7gx0ikiwa58549a4 --yes
+            printf '%s\n' "$function_name" >> "$RUNNER_TEMP/deployed-functions.txt"
+          done
+
+      - name: Prepare WeChat upload
+        id: preview
+        env:
+          WECHAT_PRIVATE_KEY: ${{ secrets.WECHAT_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          umask 077
+          printf '%s\n' "$WECHAT_PRIVATE_KEY" > "$RUNNER_TEMP/wechat-upload.key"
+          preview_version="$(date -u +%Y.%m.%d).${GITHUB_RUN_NUMBER}"
+          preview_desc="${GITHUB_SHA::7} $(git log -1 --pretty=%s)"
+          preview_desc="${preview_desc:0:45}"
+          printf 'version=%s\n' "$preview_version" >> "$GITHUB_OUTPUT"
+          printf 'desc=%s\n' "$preview_desc" >> "$GITHUB_OUTPUT"
+
+      - name: Upload WeChat preview
+        id: upload
+        env:
+          WECHAT_PRIVATE_KEY_PATH: ${{ runner.temp }}/wechat-upload.key
+          PREVIEW_VERSION: ${{ steps.preview.outputs.version }}
+          PREVIEW_DESC: ${{ steps.preview.outputs.desc }}
+        run: npm run ci:upload-preview
+
+      - name: Clean up WeChat upload key
+        if: always()
+        run: rm -f -- "$RUNNER_TEMP/wechat-upload.key"
+
+      - name: Write deployment summary
+        if: always()
+        env:
+          CHANGED_FUNCTIONS: ${{ steps.functions.outputs.changed || '[]' }}
+          DELETED_FUNCTIONS: ${{ steps.functions.outputs.deleted || '[]' }}
+          DETECTION_OUTCOME: ${{ steps.functions.outcome || 'skipped' }}
+          DEPLOY_OUTCOME: ${{ steps.deploy_functions.outcome || 'skipped' }}
+          PREVIEW_VERSION: ${{ steps.preview.outputs.version || 'not uploaded' }}
+          UPLOAD_OUTCOME: ${{ steps.upload.outcome || 'skipped' }}
+        run: |
+          set -euo pipefail
+          {
+            printf '## WeChat preview deployment\n\n'
+            printf -- '- Commit: `%s`\n' "$GITHUB_SHA"
+            printf -- '- Preview version: `%s`\n' "$PREVIEW_VERSION"
+            printf -- '- Preview upload: `%s`\n\n' "$UPLOAD_OUTCOME"
+            printf '### Cloud functions deployed\n\n'
+
+            if [[ "$DETECTION_OUTCOME" != "success" ]]; then
+              printf 'Detection did not complete; no deployment was attempted.\n'
+            elif [[ -s "$RUNNER_TEMP/deployed-functions.txt" ]]; then
+              while IFS= read -r function_name; do
+                printf -- '- `%s`\n' "$function_name"
+              done < "$RUNNER_TEMP/deployed-functions.txt"
+              if [[ "$DEPLOY_OUTCOME" != "success" ]]; then
+                printf '\nDeployment stopped after the functions listed above; review the failed step.\n'
+              fi
+            elif [[ "$CHANGED_FUNCTIONS" == "[]" ]]; then
+              printf 'None; no registered cloud functions changed.\n'
+            elif [[ "$DEPLOY_OUTCOME" == "skipped" ]]; then
+              printf 'None; automatic function deployment was skipped for this event.\n'
+            else
+              printf 'None completed. Review the failed deployment step.\n'
+            fi
+
+            printf '\n### Deletion warning\n\n'
+            if [[ "$DETECTION_OUTCOME" != "success" ]]; then
+              printf 'Deletion detection did not complete.\n'
+            elif [[ "$DELETED_FUNCTIONS" == "[]" ]]; then
+              printf 'No registered cloud function deletions detected.\n'
+            else
+              printf 'The following functions had deleted files and were not deleted from CloudBase: `%s`.\n' \
+                "$DELETED_FUNCTIONS"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
