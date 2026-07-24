@@ -62,8 +62,7 @@ describe('admin console page', () => {
     jest.clearAllMocks();
     mockCheckAdmin.mockResolvedValue({ ok: true, isAdmin: true });
     mockListAdminCollections.mockResolvedValue({
-      collections: ['users', 'projects', 'categories', 'family_assets', 'asset_changes'],
-      readOnlyCollections: ['admin_audit_logs']
+      collections: ['users', 'projects', 'categories', 'family_assets', 'asset_changes']
     });
     mockQueryAdminDocuments.mockResolvedValue({
       documents: [{ _id: 'project-1', name: '华泰稳健一号' }]
@@ -171,7 +170,6 @@ describe('admin console page', () => {
     instance.setData({
       authorized: true,
       collections: ['projects', 'users'],
-      mutableCollections: ['projects', 'users'],
       selectedCollection: 'projects'
     });
 
@@ -196,7 +194,6 @@ describe('admin console page', () => {
     instance.setData({
       authorized: true,
       collections: ['projects', 'users'],
-      mutableCollections: ['projects', 'users'],
       selectedCollection: 'projects'
     });
 
@@ -239,21 +236,20 @@ describe('admin console page', () => {
     });
   });
 
-  test('treats admin audit logs as read-only in state and markup', async () => {
+  test('keeps all listed collections writable in state and markup', async () => {
     const instance = page();
     instance.setData({
       authorized: true,
-      collections: ['projects', 'admin_audit_logs'],
-      mutableCollections: ['projects'],
+      collections: ['projects', 'users'],
       selectedCollection: 'projects'
     });
 
     await instance.onCollectionChange({ detail: { value: 1 } });
 
-    expect(instance.data.selectedCollection).toBe('admin_audit_logs');
-    expect(instance.data.selectedCollectionWritable).toBe(false);
-    expect(adminMarkup).toContain('wx:if="{{selectedCollectionWritable}}" class="editor-actions"');
-    expect(adminMarkup).toContain('disabled="{{saving || !selectedCollectionWritable}}"');
+    expect(instance.data.selectedCollection).toBe('users');
+    expect(instance.data.selectedCollectionWritable).toBe(true);
+    expect(adminMarkup).toContain('class="editor-actions"');
+    expect(adminMarkup).not.toContain('selectedCollectionWritable');
   });
 
   test.each([
@@ -273,7 +269,6 @@ describe('admin console page', () => {
     instance.setData({
       authorized: true,
       collections: ['projects', 'users'],
-      mutableCollections: ['projects', 'users'],
       selectedCollection: 'projects',
       ...state
     });
@@ -345,7 +340,6 @@ describe('admin console page', () => {
     instance.setData({
       authorized: true,
       collections: ['projects', 'users'],
-      mutableCollections: ['projects', 'users'],
       selectedCollection: 'projects',
       selectedId: 'project-1'
     });
@@ -441,7 +435,7 @@ describe('admin console page', () => {
     expect(adminMarkup).toContain(
       'class="weui-btn weui-btn_primary query-button" loading="{{loading}}" disabled="{{saving}}"'
     );
-    expect(adminMarkup.match(/disabled="{{saving}}"/g)).toHaveLength(9);
+    expect(adminMarkup.match(/disabled="{{saving}}"/g)).toHaveLength(10);
   });
 
   test('ignores context-changing handlers while saving', async () => {

@@ -7,8 +7,6 @@ const ADMIN_OPENID = 'oHl_0xWFZ3dlzPEAZ0vUQqCngzg4';
 const CRUD_COLLECTIONS = Object.freeze([
   'users', 'projects', 'categories', 'family_assets', 'asset_changes'
 ]);
-const READ_ONLY_COLLECTIONS = Object.freeze(['admin_audit_logs']);
-const ALL_COLLECTIONS = new Set([...CRUD_COLLECTIONS, ...READ_ONLY_COLLECTIONS]);
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 50;
 
@@ -19,7 +17,7 @@ function requireAdmin() {
 }
 
 function requireCollection(name, { writable = false } = {}) {
-  const allowed = writable ? CRUD_COLLECTIONS.includes(name) : ALL_COLLECTIONS.has(name);
+  const allowed = CRUD_COLLECTIONS.includes(name);
   if (!allowed) throw new Error('COLLECTION_NOT_ALLOWED');
   return name;
 }
@@ -93,76 +91,40 @@ function requireWriteData(data) {
   return data;
 }
 
-function auditRecord(operatorOpenid, action, collectionName, documentId, before, after) {
-  return {
-    operatorOpenid,
-    action,
-    collection: collectionName,
-    documentId,
-    before,
-    after,
-    createdAt: db.serverDate()
-  };
-}
-
-async function writeWithAudit(operatorOpenid, event) {
+async function writeDocument(event) {
   const collectionName = requireCollection(event.collection, { writable: true });
   const data = event.action === 'remove' ? undefined : requireWriteData(event.data);
+  const target = db.collection(collectionName);
 
-  const transactionResult = await db.runTransaction(async (transaction) => {
-    const target = transaction.collection(collectionName);
-    const audits = transaction.collection('admin_audit_logs');
+  if (event.action === 'create') {
+    const result = await target.add({ data });
+    return { document: { _id: result._id, ...data } };
+  }
 
-    if (event.action === 'create') {
-      const result = await target.add({ data });
-      const document = { _id: result._id, ...data };
-      await audits.add({
-        data: auditRecord(operatorOpenid, 'create', collectionName, result._id, null, document)
-      });
-      return { document };
-    }
+  const id = requireDocumentId(event.id);
 
-    const id = requireDocumentId(event.id);
-    const before = await getDocument(collectionName, id, transaction);
+  if (event.action === 'update') {
+    const before = await getDocument(collectionName, id);
+    await target.doc(id).update({ data });
+    return { document: { ...before, ...data, _id: id } };
+  }
 
-    if (event.action === 'update') {
-      await target.doc(id).update({ data });
-      const document = { ...before, ...data, _id: id };
-      await audits.add({
-        data: auditRecord(operatorOpenid, 'update', collectionName, id, before, document)
-      });
-      return { document };
-    }
+  if (event.action === 'set') {
+    await target.doc(id).set({ data });
+    return { document: { _id: id, ...data } };
+  }
 
-    if (event.action === 'set') {
-      await target.doc(id).set({ data });
-      const document = { _id: id, ...data };
-      await audits.add({
-        data: auditRecord(operatorOpenid, 'set', collectionName, id, before, document)
-      });
-      return { document };
-    }
-
-    await target.doc(id).remove();
-    await audits.add({
-      data: auditRecord(operatorOpenid, 'remove', collectionName, id, before, null)
-    });
-    return {};
-  });
-
-  return transactionResult && transactionResult.result
-    ? transactionResult.result
-    : transactionResult;
+  await target.doc(id).remove();
+  return {};
 }
 
 exports.main = async (event = {}) => {
-  const operatorOpenid = requireAdmin();
+  requireAdmin();
   if (event.action === 'check') return { ok: true, isAdmin: true };
   if (event.action === 'listCollections') {
     return {
       ok: true,
-      collections: [...CRUD_COLLECTIONS],
-      readOnlyCollections: [...READ_ONLY_COLLECTIONS]
+      collections: [...CRUD_COLLECTIONS]
     };
   }
   if (event.action === 'query') return { ok: true, ...(await queryDocuments(event)) };
@@ -171,7 +133,7 @@ exports.main = async (event = {}) => {
     return { ok: true, document: await getDocument(collectionName, event.id) };
   }
   if (['create', 'update', 'set', 'remove'].includes(event.action)) {
-    return { ok: true, ...(await writeWithAudit(operatorOpenid, event)) };
+    return { ok: true, ...(await writeDocument(event)) };
   }
   throw new Error('UNKNOWN_ACTION');
 };

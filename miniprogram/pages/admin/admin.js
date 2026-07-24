@@ -82,7 +82,6 @@ Page({
     loading: false,
     saving: false,
     collections: [],
-    mutableCollections: [],
     selectedCollection: '',
     selectedCollectionWritable: false,
     documentId: '',
@@ -105,14 +104,12 @@ Page({
       () => {
         this.setData({ authorized: true });
         return listAdminCollections()
-          .then(({ collections, readOnlyCollections }) => {
-            const allCollections = [...collections, ...readOnlyCollections];
+          .then(({ collections }) => {
             this.setData({
               checking: false,
-              collections: allCollections,
-              mutableCollections: collections,
-              selectedCollection: allCollections[0] || '',
-              selectedCollectionWritable: collections.includes(allCollections[0])
+              collections,
+              selectedCollection: collections[0] || '',
+              selectedCollectionWritable: Boolean(collections[0])
             });
             return this.queryDocuments();
           })
@@ -172,7 +169,7 @@ Page({
     const selectedCollection = this.data.collections[Number(event.detail.value)];
     this.setData({
       selectedCollection,
-      selectedCollectionWritable: this.data.mutableCollections.includes(selectedCollection),
+      selectedCollectionWritable: Boolean(selectedCollection),
       documentId: '',
       keyword: '',
       documents: [],

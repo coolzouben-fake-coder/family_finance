@@ -48,7 +48,7 @@ jobs:
       - name: Install dependencies
         run: |
           npm ci
-          npm install --no-save @cloudbase/cli@3.6.4 @cloudbase/manager-node@5.6.4 miniprogram-ci@2.1.31
+          npm install --no-save @cloudbase/cli@3.6.4 miniprogram-ci@2.1.31
 
       - name: Run tests
         run: npm test -- --runInBand
@@ -62,14 +62,6 @@ jobs:
           npm run ci:detect-functions -- \
             --before "$BEFORE_SHA" \
             --after "$GITHUB_SHA"
-
-      - name: Ensure admin database resources
-        if: github.event_name == 'push' && contains(fromJSON(steps.functions.outputs.changed), 'admin')
-        env:
-          TENCENTCLOUD_SECRETID: ${{ secrets.TENCENT_SECRET_ID }}
-          TENCENTCLOUD_SECRETKEY: ${{ secrets.TENCENT_SECRET_KEY }}
-          CLOUDBASE_ENV_ID: cloudbase-d7gx0ikiwa58549a4
-        run: node scripts/ensure-admin-database.js
 
       - name: Deploy changed cloud functions
         id: deploy_functions

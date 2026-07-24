@@ -1,7 +1,6 @@
 let adminOpenid;
 let mockCurrentOpenid;
 let mockDocuments;
-let mockAuditAddError;
 
 function clone(value) {
   return JSON.parse(JSON.stringify(value));
@@ -9,7 +8,6 @@ function clone(value) {
 
 function resetDatabase() {
   mockCurrentOpenid = adminOpenid;
-  mockAuditAddError = null;
   mockDocuments = {
     users: [{ _id: 'user-1', openid: adminOpenid, enabled: true }],
     projects: [
@@ -18,8 +16,7 @@ function resetDatabase() {
     ],
     categories: [],
     family_assets: [],
-    asset_changes: [],
-    admin_audit_logs: []
+    asset_changes: []
   };
 }
 
@@ -92,7 +89,6 @@ function mockMutableCollection(store, name) {
       };
     },
     async add({ data }) {
-      if (name === 'admin_audit_logs' && mockAuditAddError) throw mockAuditAddError;
       const _id = `${name}-${store[name].length + 1}`;
       store[name].push({ _id, ...clone(data) });
       return { _id };
@@ -114,7 +110,10 @@ jest.mock('wx-server-sdk', () => ({
   init: jest.fn(),
   getWXContext: () => ({ OPENID: mockCurrentOpenid }),
   database: () => ({
-    collection: mockCollection,
+    collection: (name) => ({
+      ...mockCollection(name),
+      ...mockMutableCollection(mockDocuments, name)
+    }),
     serverDate: () => 'SERVER_DATE',
     runTransaction: mockRunTransaction,
     RegExp: ({ regexp, options }) => ({
@@ -136,12 +135,11 @@ describe('admin read API', () => {
     await expect(main({ action, collection: 'projects', id: 'project-1' })).rejects.toThrow('ADMIN_DENIED');
   });
 
-  test('returns the fixed mutable and read-only collection lists', async () => {
+  test('returns only the fixed mutable collection list', async () => {
     const { main } = require('./index');
     await expect(main({ action: 'listCollections' })).resolves.toEqual({
       ok: true,
-      collections: ['users', 'projects', 'categories', 'family_assets', 'asset_changes'],
-      readOnlyCollections: ['admin_audit_logs']
+      collections: ['users', 'projects', 'categories', 'family_assets', 'asset_changes']
     });
   });
 
@@ -188,50 +186,22 @@ describe('admin write API', () => {
     })).rejects.toThrow('ADMIN_DENIED');
   });
 
-  test('creates a document and its audit in the same transaction', async () => {
+  test('creates a document directly in the target collection', async () => {
     const { main } = require('./index');
     const result = await main({
       action: 'create', collection: 'categories', data: { name: '券商理财', enabled: true }
     });
     expect(result.document).toEqual(expect.objectContaining({ name: '券商理财' }));
-    expect(mockDocuments.admin_audit_logs).toContainEqual(expect.objectContaining({
-      operatorOpenid: adminOpenid,
-      action: 'create',
-      collection: 'categories',
-      documentId: result.document._id,
-      before: null,
-      after: result.document
-    }));
+    expect(mockDocuments.categories).toContainEqual(result.document);
   });
 
-  test('rolls back the target write when the audit insert fails', async () => {
-    const before = clone(mockDocuments.projects);
-    mockAuditAddError = new Error('audit add failed');
-    const { main } = require('./index');
-
-    await expect(main({
-      action: 'update',
-      collection: 'projects',
-      id: 'project-1',
-      data: { principal: 99999 }
-    })).rejects.toThrow('audit add failed');
-
-    expect(mockDocuments.projects).toEqual(before);
-    expect(mockDocuments.admin_audit_logs).toEqual([]);
-  });
-
-  test('partially updates a document and records before and after', async () => {
+  test('partially updates a document directly', async () => {
     const { main } = require('./index');
     const result = await main({
       action: 'update', collection: 'projects', id: 'project-1', data: { principal: 12000 }
     });
     expect(result.document).toEqual(expect.objectContaining({
       _id: 'project-1', name: '华泰稳健一号', principal: 12000
-    }));
-    expect(mockDocuments.admin_audit_logs[0]).toEqual(expect.objectContaining({
-      action: 'update',
-      before: expect.objectContaining({ principal: 10000 }),
-      after: expect.objectContaining({ principal: 12000 })
     }));
   });
 
@@ -245,40 +215,19 @@ describe('admin write API', () => {
     })).rejects.toThrow('DATA_INVALID');
   });
 
-  test('overwrites a document and records the replaced snapshot', async () => {
+  test('overwrites a document directly', async () => {
     const { main } = require('./index');
     const result = await main({
       action: 'set', collection: 'projects', id: 'project-1', data: { name: '纠正后的项目' }
     });
     expect(result.document).toEqual({ _id: 'project-1', name: '纠正后的项目' });
-    expect(mockDocuments.admin_audit_logs[0]).toEqual(expect.objectContaining({
-      action: 'set',
-      before: expect.objectContaining({ principal: 10000 }),
-      after: { _id: 'project-1', name: '纠正后的项目' }
-    }));
   });
 
-  test('removes a document and records a null after value', async () => {
+  test('removes a document directly', async () => {
     const { main } = require('./index');
     await expect(main({
       action: 'remove', collection: 'projects', id: 'project-1'
     })).resolves.toEqual({ ok: true });
     expect(mockDocuments.projects.find((item) => item._id === 'project-1')).toBeUndefined();
-    expect(mockDocuments.admin_audit_logs[0]).toEqual(expect.objectContaining({
-      action: 'remove',
-      documentId: 'project-1',
-      before: expect.objectContaining({ name: '华泰稳健一号' }),
-      after: null
-    }));
-  });
-
-  test.each(['create', 'update', 'set', 'remove'])('keeps audit logs read-only for %s', async (action) => {
-    const { main } = require('./index');
-    await expect(main({
-      action,
-      collection: 'admin_audit_logs',
-      id: 'audit-1',
-      data: { changed: true }
-    })).rejects.toThrow('COLLECTION_NOT_ALLOWED');
   });
 });

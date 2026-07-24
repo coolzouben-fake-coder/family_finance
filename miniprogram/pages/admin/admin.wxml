@@ -68,11 +68,11 @@
         <view class="weui-cell">
           <view class="weui-cell__bd">
             <textarea class="json-editor" value="{{editorText}}" bindinput="onEditorInput"
-              disabled="{{saving || !selectedCollectionWritable}}" />
+              disabled="{{saving}}" />
           </view>
         </view>
       </view>
-      <view wx:if="{{selectedCollectionWritable}}" class="editor-actions">
+      <view class="editor-actions">
         <button class="weui-btn weui-btn_default" bindtap="startCreate" disabled="{{saving}}">新建</button>
         <button wx:if="{{editorMode === 'create'}}"
           class="weui-btn weui-btn_primary" bindtap="createDocument" loading="{{saving}}"

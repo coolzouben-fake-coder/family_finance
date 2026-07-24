@@ -11,7 +11,7 @@ test('deploys validated changed functions sequentially with the pinned CloudBase
   expect(packageJson.devDependencies['@cloudbase/manager-node']).toBeUndefined()
   expect(packageJson.devDependencies['@cloudbase/cli']).toBeUndefined()
   expect(workflow).toContain(
-    'npm install --no-save @cloudbase/cli@3.6.4 @cloudbase/manager-node@5.6.4 miniprogram-ci@2.1.31'
+    'npm install --no-save @cloudbase/cli@3.6.4 miniprogram-ci@2.1.31'
   )
   expect(workflow).toContain('CHANGED_FUNCTIONS must be a JSON array')
   expect(workflow).toContain('for function_name in "${changed_functions[@]}"; do')
@@ -20,31 +20,22 @@ test('deploys validated changed functions sequentially with the pinned CloudBase
   expect(workflow).not.toContain('--force')
 })
 
-test('prepares the admin audit collection before deploying changed functions', () => {
-  const ensureIndex = workflow.indexOf('name: Ensure admin database resources')
-  const deployIndex = workflow.indexOf('name: Deploy changed cloud functions')
-  const ensureStep = workflow.slice(ensureIndex, deployIndex)
-
-  expect(ensureIndex).toBeGreaterThan(-1)
-  expect(deployIndex).toBeGreaterThan(ensureIndex)
-  expect(ensureStep).toContain("contains(fromJSON(steps.functions.outputs.changed), 'admin')")
-  expect(ensureStep).toContain('TENCENTCLOUD_SECRETID: ${{ secrets.TENCENT_SECRET_ID }}')
-  expect(ensureStep).toContain('TENCENTCLOUD_SECRETKEY: ${{ secrets.TENCENT_SECRET_KEY }}')
-  expect(ensureStep).toContain('CLOUDBASE_ENV_ID: cloudbase-d7gx0ikiwa58549a4')
-  expect(ensureStep).toContain('run: node scripts/ensure-admin-database.js')
+test('does not prepare admin database resources in CI', () => {
+  expect(workflow).not.toContain('Ensure admin database resources')
+  expect(workflow).not.toContain('ensure-admin-database')
+  expect(workflow).not.toContain('@cloudbase/manager-node')
 })
 
-test('documents complete admin deployment and authorization acceptance checks', () => {
+test('documents the lightweight admin debug checks', () => {
   [
-    'admin_audit_logs',
     'admin 云函数',
     '管理员账号',
     '非管理员账号',
     'CRUD',
-    '审计记录',
-    '客户端直接访问',
-    '拒绝'
+    '隐藏管理控制台'
   ].forEach((text) => expect(checklist).toContain(text))
+  expect(checklist).not.toContain('admin_audit_logs')
+  expect(checklist).not.toContain('审计记录')
 })
 
 test('passes prepared preview metadata unchanged into the uploader and summary', () => {
