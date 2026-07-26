@@ -52,14 +52,24 @@ jobs:
           const fs = require('fs')
           const file = require.resolve('miniprogram-ci/dist/ci/cloud/uploadFunction.js')
           const source = fs.readFileSync(file, 'utf8')
-          const target = 'clearTimeout(l),o(e)}});function getLogServiceProperties'
-          const replacement = 'if(e&&e.code==="ResourceNotFound.Function"){clearTimeout(l),n=!0,t(void 0)}else clearTimeout(l),o(e)}});function getLogServiceProperties'
+          const notFoundTarget = 'clearTimeout(l),o(e)}});function getLogServiceProperties'
+          const notFoundReplacement = 'if(e&&e.code==="ResourceNotFound.Function"){clearTimeout(l),n=!0,t(void 0)}else clearTimeout(l),o(e)}});function getLogServiceProperties'
+          const createTarget = 'log.info("create cloudfunction done, continue to update code");else{'
+          const createReplacement = 'log.info("create cloudfunction done, continue to update code"),await waitFuncDeploy({namespace:c,region:u,functionName:n,codeSecret:p,topts:{request:(0,cloudapi_1.boundTransactRequest)(e.project),transactType:cloudAPI.TransactType.IDE}});else{'
 
-          if (!source.includes(target)) {
-            throw new Error('miniprogram-ci uploadFunction patch target not found')
+          if (!source.includes(notFoundTarget)) {
+            throw new Error('miniprogram-ci ResourceNotFound patch target not found')
+          }
+          if (!source.includes(createTarget)) {
+            throw new Error('miniprogram-ci create-wait patch target not found')
           }
 
-          fs.writeFileSync(file, source.replace(target, replacement))
+          fs.writeFileSync(
+            file,
+            source
+              .replace(notFoundTarget, notFoundReplacement)
+              .replace(createTarget, createReplacement)
+          )
           NODE
 
       - name: Run tests
