@@ -46,6 +46,22 @@ jobs:
           npm ci
           npm install --no-save miniprogram-ci@2.1.31
 
+      - name: Patch miniprogram-ci function creation
+        run: |
+          node - <<'NODE'
+          const fs = require('fs')
+          const file = require.resolve('miniprogram-ci/dist/ci/cloud/uploadFunction.js')
+          const source = fs.readFileSync(file, 'utf8')
+          const target = 'clearTimeout(l),o(e)}});function getLogServiceProperties'
+          const replacement = 'if(e&&e.code==="ResourceNotFound.Function"){clearTimeout(l),n=!0,t(void 0)}else clearTimeout(l),o(e)}});function getLogServiceProperties'
+
+          if (!source.includes(target)) {
+            throw new Error('miniprogram-ci uploadFunction patch target not found')
+          }
+
+          fs.writeFileSync(file, source.replace(target, replacement))
+          NODE
+
       - name: Run tests
         run: npm test -- --runInBand
 
