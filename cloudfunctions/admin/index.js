@@ -43,6 +43,15 @@ function escapeRegExp(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+function isMissingCollection(error) {
+  const text = [
+    error && error.message,
+    error && error.errMsg,
+    error && error.errCode
+  ].filter(Boolean).join(' ');
+  return /DATABASE_COLLECTION_NOT_EXIST|COLLECTION_NOT_EXIST|collection.*not.*exist/i.test(text);
+}
+
 async function getDocument(collectionName, id, database = db) {
   try {
     const result = await database.collection(collectionName).doc(requireDocumentId(id)).get();
@@ -82,8 +91,13 @@ async function queryDocuments(event) {
     query = db.collection(collectionName);
   }
 
-  const result = await query.skip(offset).limit(limit).get();
-  return { documents: result.data || [], limit, offset };
+  try {
+    const result = await query.skip(offset).limit(limit).get();
+    return { documents: result.data || [], limit, offset };
+  } catch (error) {
+    if (isMissingCollection(error)) return { documents: [], limit, offset };
+    throw error;
+  }
 }
 
 function requireWriteData(data) {

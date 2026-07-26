@@ -29,7 +29,16 @@ function errorCode(error) {
 }
 
 function errorMessage(error, fallback = '操作失败，请稍后重试') {
-  return ERROR_MESSAGES[errorCode(error)] || fallback;
+  const friendly = ERROR_MESSAGES[errorCode(error)];
+  if (friendly) return friendly;
+  if (error && error.errCode) {
+    return [
+      error.errCode,
+      error.message,
+      error.errMsg
+    ].filter(Boolean).join(' ');
+  }
+  return fallback;
 }
 
 function formatted(document) {
