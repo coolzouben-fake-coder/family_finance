@@ -3,6 +3,7 @@ const cloud = require('wx-server-sdk');
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 
 const db = cloud.database();
+// Personal debug endpoint; the server-side OpenID check is the only access gate.
 const ADMIN_OPENID = 'oHl_0xWFZ3dlzPEAZ0vUQqCngzg4';
 const CRUD_COLLECTIONS = Object.freeze([
   'users', 'projects', 'categories', 'family_assets', 'asset_changes'

@@ -20,14 +20,10 @@ jobs:
       - name: Validate repository secrets
         env:
           WECHAT_PRIVATE_KEY: ${{ secrets.WECHAT_PRIVATE_KEY }}
-          TENCENT_SECRET_ID: ${{ secrets.TENCENT_SECRET_ID }}
-          TENCENT_SECRET_KEY: ${{ secrets.TENCENT_SECRET_KEY }}
         run: |
           set -euo pipefail
           missing=()
           [[ -n "$WECHAT_PRIVATE_KEY" ]] || missing+=("WECHAT_PRIVATE_KEY")
-          [[ -n "$TENCENT_SECRET_ID" ]] || missing+=("TENCENT_SECRET_ID")
-          [[ -n "$TENCENT_SECRET_KEY" ]] || missing+=("TENCENT_SECRET_KEY")
 
           if (( ${#missing[@]} > 0 )); then
             printf '::error::Missing required repository secret(s): %s\n' "${missing[*]}"
@@ -48,10 +44,24 @@ jobs:
       - name: Install dependencies
         run: |
           npm ci
-          npm install --no-save @cloudbase/cli@3.6.4 miniprogram-ci@2.1.31
+          npm install --no-save miniprogram-ci@2.1.31
 
       - name: Run tests
         run: npm test -- --runInBand
+
+      - name: Prepare WeChat upload
+        id: preview
+        env:
+          WECHAT_PRIVATE_KEY: ${{ secrets.WECHAT_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          umask 077
+          printf '%s\n' "$WECHAT_PRIVATE_KEY" > "$RUNNER_TEMP/wechat-upload.key"
+          preview_version="$(date -u +%Y.%m.%d).${GITHUB_RUN_NUMBER}"
+          preview_desc="${GITHUB_SHA::7} $(git log -1 --pretty=%s)"
+          preview_desc="${preview_desc:0:45}"
+          printf 'version=%s\n' "$preview_version" >> "$GITHUB_OUTPUT"
+          printf 'desc=%s\n' "$preview_desc" >> "$GITHUB_OUTPUT"
 
       - name: Detect changed cloud functions
         id: functions
@@ -68,8 +78,7 @@ jobs:
         if: github.event_name == 'push' && steps.functions.outputs.changed != '[]'
         env:
           CHANGED_FUNCTIONS: ${{ steps.functions.outputs.changed }}
-          TENCENTCLOUD_SECRETID: ${{ secrets.TENCENT_SECRET_ID }}
-          TENCENTCLOUD_SECRETKEY: ${{ secrets.TENCENT_SECRET_KEY }}
+          WECHAT_PRIVATE_KEY_PATH: ${{ runner.temp }}/wechat-upload.key
         run: |
           set -euo pipefail
           node -e '
@@ -91,26 +100,18 @@ jobs:
               console.log(functionName)
             }
           ')
-          npx tcb login --apiKeyId "$TENCENTCLOUD_SECRETID" --apiKey "$TENCENTCLOUD_SECRETKEY"
           : > "$RUNNER_TEMP/deployed-functions.txt"
           for function_name in "${changed_functions[@]}"; do
-            npx tcb fn deploy "$function_name" --env-id cloudbase-d7gx0ikiwa58549a4 --yes
+            npx miniprogram-ci cloud functions upload \
+              --pp ./ \
+              --appid wxcabf6afa48b9277d \
+              --pkp "$WECHAT_PRIVATE_KEY_PATH" \
+              --env cloudbase-d7gx0ikiwa58549a4 \
+              --name "$function_name" \
+              --path "./cloudfunctions/$function_name" \
+              --remote-npm-install true
             printf '%s\n' "$function_name" >> "$RUNNER_TEMP/deployed-functions.txt"
           done
-
-      - name: Prepare WeChat upload
-        id: preview
-        env:
-          WECHAT_PRIVATE_KEY: ${{ secrets.WECHAT_PRIVATE_KEY }}
-        run: |
-          set -euo pipefail
-          umask 077
-          printf '%s\n' "$WECHAT_PRIVATE_KEY" > "$RUNNER_TEMP/wechat-upload.key"
-          preview_version="$(date -u +%Y.%m.%d).${GITHUB_RUN_NUMBER}"
-          preview_desc="${GITHUB_SHA::7} $(git log -1 --pretty=%s)"
-          preview_desc="${preview_desc:0:45}"
-          printf 'version=%s\n' "$preview_version" >> "$GITHUB_OUTPUT"
-          printf 'desc=%s\n' "$preview_desc" >> "$GITHUB_OUTPUT"
 
       - name: Upload WeChat preview
         id: upload

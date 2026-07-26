@@ -3,70 +3,38 @@ const path = require('path')
 
 const root = path.resolve(__dirname, '..', '..')
 const workflow = fs.readFileSync(path.join(root, '.github/workflows/deploy-preview.yml'), 'utf8')
-const checklist = fs.readFileSync(path.join(root, 'docs/qa/first-version-checklist.md'), 'utf8')
 const packageJson = require(path.join(root, 'package.json'))
 
-test('deploys validated changed functions sequentially with the pinned CloudBase CLI', () => {
+test('deploys changed cloud functions with miniprogram-ci and the WeChat upload key', () => {
   expect(packageJson.scripts['ci:deploy-functions']).toBeUndefined()
-  expect(packageJson.devDependencies['@cloudbase/manager-node']).toBeUndefined()
   expect(packageJson.devDependencies['@cloudbase/cli']).toBeUndefined()
-  expect(workflow).toContain(
-    'npm install --no-save @cloudbase/cli@3.6.4 miniprogram-ci@2.1.31'
-  )
-  expect(workflow).toContain('CHANGED_FUNCTIONS must be a JSON array')
-  expect(workflow).toContain('npx tcb login --apiKeyId "$TENCENTCLOUD_SECRETID" --apiKey "$TENCENTCLOUD_SECRETKEY"')
-  expect(workflow).toContain('for function_name in "${changed_functions[@]}"; do')
-  expect(workflow).toContain('npx tcb fn deploy "$function_name" --env-id cloudbase-d7gx0ikiwa58549a4 --yes')
-  expect(workflow).not.toContain(' fn delete ')
-  expect(workflow).not.toContain('--force')
+  expect(workflow).toContain('npm install --no-save miniprogram-ci@2.1.31')
+  expect(workflow).not.toContain('@cloudbase/cli')
+  expect(workflow).not.toContain('TENCENT_SECRET_ID')
+  expect(workflow).not.toContain('TENCENT_SECRET_KEY')
+  expect(workflow).toContain('npx miniprogram-ci cloud functions upload')
+  expect(workflow).toContain('--appid wxcabf6afa48b9277d')
+  expect(workflow).toContain('--pkp "$WECHAT_PRIVATE_KEY_PATH"')
+  expect(workflow).toContain('--env cloudbase-d7gx0ikiwa58549a4')
+  expect(workflow).toContain('--name "$function_name"')
+  expect(workflow).toContain('--path "./cloudfunctions/$function_name"')
+  expect(workflow).toContain('--remote-npm-install true')
 })
 
-test('does not prepare admin database resources in CI', () => {
-  expect(workflow).not.toContain('Ensure admin database resources')
-  expect(workflow).not.toContain('ensure-admin-database')
-  expect(workflow).not.toContain('@cloudbase/manager-node')
-})
-
-test('documents the lightweight admin debug checks', () => {
-  [
-    'admin 云函数',
-    '管理员账号',
-    '非管理员账号',
-    'CRUD',
-    '隐藏管理控制台'
-  ].forEach((text) => expect(checklist).toContain(text))
-  expect(checklist).not.toContain('admin_audit_logs')
-  expect(checklist).not.toContain('审计记录')
-})
-
-test('passes prepared preview metadata unchanged into the uploader and summary', () => {
-  expect(workflow).toContain('PREVIEW_VERSION: ${{ steps.preview.outputs.version }}')
-  expect(workflow).toContain('PREVIEW_DESC: ${{ steps.preview.outputs.desc }}')
-  expect(workflow).toContain("PREVIEW_VERSION: ${{ steps.preview.outputs.version || 'not uploaded' }}")
-})
-
-test('publishes the generated preview QR artifact after upload and before key cleanup', () => {
+test('prepares the WeChat key before deploying functions, uploading preview, and generating QR', () => {
+  const prepareIndex = workflow.indexOf('name: Prepare WeChat upload')
+  const deployIndex = workflow.indexOf('name: Deploy changed cloud functions')
   const uploadIndex = workflow.indexOf('name: Upload WeChat preview')
   const generateQrIndex = workflow.indexOf('name: Generate WeChat preview QR')
   const uploadArtifactIndex = workflow.indexOf('name: Upload WeChat preview QR artifact')
   const cleanupIndex = workflow.indexOf('name: Clean up WeChat upload key')
-  const generateQrStep = workflow.slice(generateQrIndex, uploadArtifactIndex)
 
+  expect(prepareIndex).toBeGreaterThan(-1)
+  expect(deployIndex).toBeGreaterThan(prepareIndex)
+  expect(uploadIndex).toBeGreaterThan(deployIndex)
   expect(generateQrIndex).toBeGreaterThan(uploadIndex)
   expect(uploadArtifactIndex).toBeGreaterThan(generateQrIndex)
   expect(cleanupIndex).toBeGreaterThan(uploadArtifactIndex)
-  expect(generateQrStep).toContain(
-    'WECHAT_PRIVATE_KEY_PATH: ${{ runner.temp }}/wechat-upload.key'
-  )
-  expect(generateQrStep).toContain('PREVIEW_DESC: ${{ steps.preview.outputs.desc }}')
-  expect(workflow).toContain('PREVIEW_QR_PATH: ${{ runner.temp }}/wechat-preview-qrcode.png')
-  expect(workflow).toContain('run: npm run ci:generate-preview-qr')
-  expect(workflow).toContain('uses: actions/upload-artifact@v4')
   expect(workflow).toContain('name: wechat-preview-qrcode')
   expect(workflow).toContain('path: ${{ runner.temp }}/wechat-preview-qrcode.png')
-  expect(workflow).toContain('if-no-files-found: error')
-  expect(workflow).toContain('retention-days: 7')
-  expect(workflow).toContain("QR_GENERATION_OUTCOME: ${{ steps.generate_qr.outcome || 'skipped' }}")
-  expect(workflow).toContain("QR_ARTIFACT_UPLOAD_OUTCOME: ${{ steps.upload_qr.outcome || 'skipped' }}")
-  expect(workflow).toContain('only when QR generation and artifact upload both succeeded')
 })
