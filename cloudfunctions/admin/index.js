@@ -49,7 +49,37 @@ function isMissingCollection(error) {
     error && error.errMsg,
     error && error.errCode
   ].filter(Boolean).join(' ');
-  return /DATABASE_COLLECTION_NOT_EXIST|COLLECTION_NOT_EXIST|collection.*not.*exist/i.test(text);
+  return /DATABASE_COLLECTION_NOT_EXIST|COLLECTION_NOT_EXIST|-502005|collection.*(?:not|does not).*exist|collection.*不存在/i.test(text);
+}
+
+function isMissingDocument(error) {
+  const text = [
+    error && error.message,
+    error && error.errMsg,
+    error && error.errCode
+  ].filter(Boolean).join(' ');
+  return /DATABASE_DOCUMENT_NOT_EXIST|DOCUMENT_NOT_EXIST|document.*(?:not|does not).*exist|document.*不存在/i.test(text);
+}
+
+function publicError(error) {
+  const text = [
+    error && error.message,
+    error && error.errMsg,
+    error && error.errCode
+  ].filter(Boolean).join(' ');
+  const code = [
+    'ADMIN_DENIED',
+    'COLLECTION_NOT_ALLOWED',
+    'DOCUMENT_ID_REQUIRED',
+    'DOCUMENT_NOT_FOUND',
+    'DATA_INVALID',
+    'UNKNOWN_ACTION'
+  ].find((item) => text.includes(item)) || 'ADMIN_FUNCTION_FAILED';
+  return {
+    ok: false,
+    errorCode: code,
+    errorMessage: error && (error.message || error.errMsg) ? (error.message || error.errMsg) : code
+  };
 }
 
 async function getDocument(collectionName, id, database = db) {
@@ -60,7 +90,7 @@ async function getDocument(collectionName, id, database = db) {
   } catch (error) {
     if (error && (
       error.message === 'DOCUMENT_NOT_FOUND'
-      || error.errCode === 'DATABASE_DOCUMENT_NOT_EXIST'
+      || isMissingDocument(error)
     )) throw new Error('DOCUMENT_NOT_FOUND');
     throw error;
   }
@@ -85,6 +115,7 @@ async function queryDocuments(event) {
       };
     } catch (error) {
       if (error.message === 'DOCUMENT_NOT_FOUND') return { documents: [], limit, offset };
+      if (isMissingCollection(error)) return { documents: [], limit, offset };
       throw error;
     }
   } else {
@@ -134,23 +165,34 @@ async function writeDocument(event) {
 }
 
 exports.main = async (event = {}) => {
-  requireAdmin();
-  if (event.action === 'check') return { ok: true, isAdmin: true };
-  if (event.action === 'listCollections') {
-    return {
-      ok: true,
-      collections: [...CRUD_COLLECTIONS]
-    };
+  try {
+    requireAdmin();
+    if (event.action === 'check') return { ok: true, isAdmin: true };
+    if (event.action === 'listCollections') {
+      return {
+        ok: true,
+        collections: [...CRUD_COLLECTIONS]
+      };
+    }
+    if (event.action === 'query') return { ok: true, ...(await queryDocuments(event)) };
+    if (event.action === 'get') {
+      const collectionName = requireCollection(event.collection);
+      return { ok: true, document: await getDocument(collectionName, event.id) };
+    }
+    if (['create', 'update', 'set', 'remove'].includes(event.action)) {
+      return { ok: true, ...(await writeDocument(event)) };
+    }
+    throw new Error('UNKNOWN_ACTION');
+  } catch (error) {
+    console.error('[admin function failed]', {
+      action: event.action || '',
+      collection: event.collection || '',
+      errorCode: error && error.errCode,
+      errorMessage: error && (error.message || error.errMsg),
+      error
+    });
+    return publicError(error);
   }
-  if (event.action === 'query') return { ok: true, ...(await queryDocuments(event)) };
-  if (event.action === 'get') {
-    const collectionName = requireCollection(event.collection);
-    return { ok: true, document: await getDocument(collectionName, event.id) };
-  }
-  if (['create', 'update', 'set', 'remove'].includes(event.action)) {
-    return { ok: true, ...(await writeDocument(event)) };
-  }
-  throw new Error('UNKNOWN_ACTION');
 };
 
 exports.__test = Object.freeze({ ADMIN_OPENID });

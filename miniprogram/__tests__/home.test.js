@@ -28,6 +28,7 @@ function createHomePage() {
   page.onAssetTypeChange = pageDefinition.onAssetTypeChange.bind(page);
   page.openAssetChanges = pageDefinition.openAssetChanges.bind(page);
   page.openAdmin = pageDefinition.openAdmin.bind(page);
+  page.openProjectDetail = pageDefinition.openProjectDetail.bind(page);
   return page;
 }
 
@@ -298,6 +299,22 @@ describe('home dashboard', () => {
     page.openAdmin();
 
     expect(global.wx.navigateTo).toHaveBeenCalledWith({ url: '/pages/admin/admin' });
+  });
+
+  test('opens project details from due reminder rows with a valid id only', () => {
+    const page = createHomePage();
+    const markup = fs.readFileSync(path.join(__dirname, '../pages/home/home.wxml'), 'utf8');
+
+    page.openProjectDetail({ currentTarget: { dataset: { id: 'overdue' } } });
+    expect(global.wx.navigateTo).toHaveBeenCalledWith({
+      url: '/pages/project-form/project-form?id=overdue'
+    });
+
+    global.wx.navigateTo.mockClear();
+    page.openProjectDetail({ currentTarget: { dataset: { id: '' } } });
+    expect(global.wx.navigateTo).not.toHaveBeenCalled();
+    expect(markup).toContain('wx:for="{{overdueProjects}}" wx:key="_id" class="weui-cell reminder reminder--overdue" data-id="{{item._id}}" bindtap="openProjectDetail"');
+    expect(markup).toContain('wx:for="{{dueSoonProjects}}" wx:key="_id" class="weui-cell reminder reminder--due-soon" data-id="{{item._id}}" bindtap="openProjectDetail"');
   });
 
   test('keeps home markup free of ternary expressions for stable mini-program compilation', () => {

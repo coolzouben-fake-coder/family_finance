@@ -1,6 +1,15 @@
 function callCloud(name, data = {}, options = {}) {
   return wx.cloud.callFunction({ name, data })
-    .then((response) => response.result)
+    .then((response) => {
+      const result = response.result;
+      if (result && result.ok === false) {
+        const error = new Error(result.errorMessage || result.errorCode || 'CLOUD_FUNCTION_FAILED');
+        error.errCode = result.errorCode;
+        error.errMsg = result.errorMessage;
+        throw error;
+      }
+      return result;
+    })
     .catch((error) => {
       if (!options.silent) {
         console.error('[cloud function failed]', {

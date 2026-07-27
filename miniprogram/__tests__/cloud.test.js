@@ -42,6 +42,26 @@ describe('cloud service', () => {
     }));
   });
 
+  test('turns app-level cloud failures into rejected errors', async () => {
+    global.wx.cloud.callFunction.mockResolvedValue({
+      result: { ok: false, errorCode: 'ADMIN_DENIED', errorMessage: 'ADMIN_DENIED' }
+    });
+    const { checkAdmin } = require('../services/cloud');
+
+    await expect(checkAdmin()).rejects.toMatchObject({
+      message: 'ADMIN_DENIED',
+      errCode: 'ADMIN_DENIED',
+      errMsg: 'ADMIN_DENIED'
+    });
+
+    expect(console.error).toHaveBeenCalledWith('[cloud function failed]', expect.objectContaining({
+      name: 'admin',
+      action: 'check',
+      errCode: 'ADMIN_DENIED',
+      errMsg: 'ADMIN_DENIED'
+    }));
+  });
+
   test('sends exact admin API payloads', async () => {
     global.wx.cloud.callFunction.mockImplementation(({ data }) => Promise.resolve({ result: { ok: true, data } }));
     const {

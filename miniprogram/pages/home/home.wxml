@@ -55,7 +55,7 @@
     <view class="weui-panel__hd section-title">已到期待确认</view>
     <view class="weui-cells">
       <view wx:if="{{overdueProjects.length === 0}}" class="weui-cell empty">暂无需要确认的项目</view>
-      <view wx:for="{{overdueProjects}}" wx:key="_id" class="weui-cell reminder reminder--overdue">
+      <view wx:for="{{overdueProjects}}" wx:key="_id" class="weui-cell reminder reminder--overdue" data-id="{{item._id}}" bindtap="openProjectDetail">
         <text>{{item.name}}</text>
         <text>{{item.displayAmount}}</text>
       </view>
@@ -66,7 +66,7 @@
     <view class="weui-panel__hd section-title">即将到期</view>
     <view class="weui-cells">
       <view wx:if="{{dueSoonProjects.length === 0}}" class="weui-cell empty">暂无即将到期项目</view>
-      <view wx:for="{{dueSoonProjects}}" wx:key="_id" class="weui-cell reminder reminder--due-soon">
+      <view wx:for="{{dueSoonProjects}}" wx:key="_id" class="weui-cell reminder reminder--due-soon" data-id="{{item._id}}" bindtap="openProjectDetail">
         <text>{{item.name}}</text>
         <text>{{item.endDate}}</text>
       </view>

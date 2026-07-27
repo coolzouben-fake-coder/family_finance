@@ -146,6 +146,14 @@ Page({
     wx.navigateTo({ url: '/pages/admin/admin' });
   },
 
+  openProjectDetail(event) {
+    const id = event && event.currentTarget && event.currentTarget.dataset
+      ? event.currentTarget.dataset.id
+      : '';
+    if (!id) return;
+    wx.navigateTo({ url: `/pages/project-form/project-form?id=${encodeURIComponent(id)}` });
+  },
+
   saveAssets() {
     if (!this.data.dashboardReady || this.data.loading || this.data.savingAssets) return;
     const amount = Number(this.data.assetAmountInput);

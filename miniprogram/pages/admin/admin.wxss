@@ -16,4 +16,14 @@
   line-height: 1.5;
 }
 .editor-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16rpx; padding: 24rpx; }
-.editor-actions .weui-btn { width: 100%; margin: 0; }
+.editor-actions .weui-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+  margin: 0;
+  padding: 20rpx 16rpx;
+  box-sizing: border-box;
+}

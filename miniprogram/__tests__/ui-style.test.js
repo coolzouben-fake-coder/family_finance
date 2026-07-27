@@ -21,4 +21,27 @@ describe('WeUI visual system', () => {
     expect(legacyGuide).toContain('Deprecated UI Guide');
     expect(legacyGuide).toContain('docs/ui/weui-style-guide.md');
   });
+
+  test('keeps admin editor action buttons inside their grid cells', () => {
+    const adminStyles = fs.readFileSync(path.join(__dirname, '../pages/admin/admin.wxss'), 'utf8');
+    const actionRule = adminStyles.match(/\.editor-actions \.weui-btn\s*\{([^}]+)\}/);
+
+    expect(adminStyles).toContain('.editor-actions { display: grid;');
+    expect(actionRule && actionRule[1]).toEqual(expect.stringContaining('min-width: 0;'));
+    expect(actionRule && actionRule[1]).toEqual(expect.stringContaining('max-width: none;'));
+    expect(actionRule && actionRule[1]).toEqual(expect.stringContaining('box-sizing: border-box;'));
+  });
+
+  test('keeps project detail buttons from inheriting overflowing WeUI widths', () => {
+    const projectFormStyles = fs.readFileSync(path.join(__dirname, '../pages/project-form/project-form.wxss'), 'utf8');
+    const modeButtonRule = projectFormStyles.match(/\.return-mode-button\s*\{([^}]+)\}/);
+    const actionButtonRule = projectFormStyles.match(/\.primary-button,\s*\.secondary-button,\s*\.danger-button\s*\{([^}]+)\}/);
+
+    expect(modeButtonRule && modeButtonRule[1]).toEqual(expect.stringContaining('min-width: 0;'));
+    expect(modeButtonRule && modeButtonRule[1]).toEqual(expect.stringContaining('max-width: none;'));
+    expect(actionButtonRule && actionButtonRule[1]).toEqual(expect.stringContaining('width: 100%;'));
+    expect(actionButtonRule && actionButtonRule[1]).toEqual(expect.stringContaining('min-width: 0;'));
+    expect(actionButtonRule && actionButtonRule[1]).toEqual(expect.stringContaining('max-width: none;'));
+    expect(actionButtonRule && actionButtonRule[1]).toEqual(expect.stringContaining('box-sizing: border-box;'));
+  });
 });

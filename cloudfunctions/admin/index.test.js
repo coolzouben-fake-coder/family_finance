@@ -1,6 +1,8 @@
 let adminOpenid;
 let mockCurrentOpenid;
 let mockDocuments;
+const packageJson = require('./package.json');
+const packageLock = require('./package-lock.json');
 
 function clone(value) {
   return JSON.parse(JSON.stringify(value));
@@ -18,6 +20,13 @@ function resetDatabase() {
     family_assets: [],
     asset_changes: []
   };
+}
+
+function expectFunctionError(promise, errorCode) {
+  return expect(promise).resolves.toMatchObject({
+    ok: false,
+    errorCode
+  });
 }
 
 function matches(document, filters) {
@@ -122,17 +131,30 @@ jest.mock('wx-server-sdk', () => ({
   })
 }), { virtual: true });
 
+describe('admin deployment package', () => {
+  test('pins wx-server-sdk below the cloud runtime-incompatible 4.x line', () => {
+    expect(packageJson.dependencies['wx-server-sdk']).toBe('3.0.4');
+    expect(packageLock.packages[''].dependencies['wx-server-sdk']).toBe('3.0.4');
+    expect(packageLock.packages['node_modules/wx-server-sdk'].version).toBe('3.0.4');
+  });
+});
+
 describe('admin read API', () => {
   beforeEach(() => {
     jest.resetModules();
+    jest.spyOn(console, 'error').mockImplementation(() => {});
     ({ ADMIN_OPENID: adminOpenid } = require('./index').__test);
     resetDatabase();
+  });
+
+  afterEach(() => {
+    console.error.mockRestore();
   });
 
   test.each(['check', 'listCollections', 'query', 'get'])('denies a non-admin %s request', async (action) => {
     mockCurrentOpenid = 'another-openid';
     const { main } = require('./index');
-    await expect(main({ action, collection: 'projects', id: 'project-1' })).rejects.toThrow('ADMIN_DENIED');
+    await expectFunctionError(main({ action, collection: 'projects', id: 'project-1' }), 'ADMIN_DENIED');
   });
 
   test('returns only the fixed mutable collection list', async () => {
@@ -145,7 +167,7 @@ describe('admin read API', () => {
 
   test('rejects a collection outside the allowlist', async () => {
     const { main } = require('./index');
-    await expect(main({ action: 'query', collection: 'secrets' })).rejects.toThrow('COLLECTION_NOT_ALLOWED');
+    await expectFunctionError(main({ action: 'query', collection: 'secrets' }), 'COLLECTION_NOT_ALLOWED');
   });
 
   test('queries project names and caps pagination at 50', async () => {
@@ -166,24 +188,28 @@ describe('admin read API', () => {
 
   test('returns DOCUMENT_NOT_FOUND for an absent ID', async () => {
     const { main } = require('./index');
-    await expect(main({ action: 'get', collection: 'projects', id: 'missing' }))
-      .rejects.toThrow('DOCUMENT_NOT_FOUND');
+    await expectFunctionError(main({ action: 'get', collection: 'projects', id: 'missing' }), 'DOCUMENT_NOT_FOUND');
   });
 });
 
 describe('admin write API', () => {
   beforeEach(() => {
     jest.resetModules();
+    jest.spyOn(console, 'error').mockImplementation(() => {});
     ({ ADMIN_OPENID: adminOpenid } = require('./index').__test);
     resetDatabase();
+  });
+
+  afterEach(() => {
+    console.error.mockRestore();
   });
 
   test.each(['create', 'update', 'set', 'remove'])('denies a non-admin %s request', async (action) => {
     mockCurrentOpenid = 'another-openid';
     const { main } = require('./index');
-    await expect(main({
+    await expectFunctionError(main({
       action, collection: 'projects', id: 'project-1', data: { name: 'changed' }
-    })).rejects.toThrow('ADMIN_DENIED');
+    }), 'ADMIN_DENIED');
   });
 
   test('creates a document directly in the target collection', async () => {
@@ -207,12 +233,12 @@ describe('admin write API', () => {
 
   test('rejects _id inside write data', async () => {
     const { main } = require('./index');
-    await expect(main({
+    await expectFunctionError(main({
       action: 'update',
       collection: 'projects',
       id: 'project-1',
       data: { _id: 'replacement' }
-    })).rejects.toThrow('DATA_INVALID');
+    }), 'DATA_INVALID');
   });
 
   test('overwrites a document directly', async () => {
