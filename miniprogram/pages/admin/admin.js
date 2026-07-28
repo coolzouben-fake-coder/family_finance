@@ -201,17 +201,36 @@ Page({
   },
 
   selectDocument(event) {
-    if (this.data.saving) return;
+    if (this.data.saving) return Promise.resolve();
     const selectedId = event.currentTarget.dataset.id;
     const document = this.data.documents.find((item) => item._id === selectedId);
-    if (!document) return;
-    const { _id, ...editable } = document;
-    this.setData({
-      selectedId: _id,
-      editorText: formatted(editable),
-      editorMode: 'edit',
-      errorMessage: ''
-    });
+    if (!document) return Promise.resolve();
+    const collection = this.data.selectedCollection;
+    const requestToken = (this.selectRequestToken || 0) + 1;
+    this.selectRequestToken = requestToken;
+    return getAdminDocument(collection, selectedId)
+      .then(({ document: latestDocument }) => {
+        if (
+          this.selectRequestToken !== requestToken
+          || this.data.saving
+          || this.data.selectedCollection !== collection
+        ) return;
+        const { _id, ...editable } = latestDocument;
+        this.setData({
+          selectedId: _id,
+          editorText: formatted(editable),
+          editorMode: 'edit',
+          errorMessage: ''
+        });
+      })
+      .catch((error) => {
+        if (
+          this.selectRequestToken !== requestToken
+          || this.data.saving
+          || this.data.selectedCollection !== collection
+        ) return;
+        wx.showToast({ title: errorMessage(error), icon: 'none' });
+      });
   },
 
   startCreate() {

@@ -67,7 +67,7 @@
       <view class="weui-cells weui-cells_form">
         <view class="weui-cell">
           <view class="weui-cell__bd">
-            <textarea class="json-editor" value="{{editorText}}" bindinput="onEditorInput"
+            <textarea class="json-editor" value="{{editorText}}" maxlength="-1" bindinput="onEditorInput"
               disabled="{{saving}}" />
           </view>
         </view>

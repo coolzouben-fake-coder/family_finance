@@ -5,7 +5,12 @@ const packageJson = require('./package.json');
 const packageLock = require('./package-lock.json');
 
 function clone(value) {
-  return JSON.parse(JSON.stringify(value));
+  if (value instanceof Date) return new Date(value.getTime());
+  if (Array.isArray(value)) return value.map(clone);
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, clone(item)]));
+  }
+  return value;
 }
 
 function resetDatabase() {
@@ -229,6 +234,36 @@ describe('admin write API', () => {
     expect(result.document).toEqual(expect.objectContaining({
       _id: 'project-1', name: '华泰稳健一号', principal: 12000
     }));
+  });
+
+  test('preserves asset change createdAt as a Date when JSON editor sends an ISO string', async () => {
+    mockDocuments.asset_changes.push({
+      _id: 'change-1',
+      reason: '原原因',
+      createdAt: new Date('2026-07-23T04:00:00.000Z')
+    });
+    const { main } = require('./index');
+
+    const result = await main({
+      action: 'update',
+      collection: 'asset_changes',
+      id: 'change-1',
+      data: {
+        reason: '只改原因',
+        createdAt: '2026-07-24T04:00:00.000Z'
+      }
+    });
+
+    expect(result).toEqual({
+      ok: true,
+      document: expect.objectContaining({
+        _id: 'change-1',
+        reason: '只改原因',
+        createdAt: new Date('2026-07-24T04:00:00.000Z')
+      })
+    });
+    expect(mockDocuments.asset_changes[0].createdAt).toBeInstanceOf(Date);
+    expect(mockDocuments.asset_changes[0].createdAt.toISOString()).toBe('2026-07-24T04:00:00.000Z');
   });
 
   test('rejects _id inside write data', async () => {

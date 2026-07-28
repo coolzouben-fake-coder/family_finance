@@ -438,6 +438,11 @@ describe('admin console page', () => {
     expect(adminMarkup.match(/disabled="{{saving}}"/g)).toHaveLength(10);
   });
 
+  test('does not truncate long JSON documents in the editor textarea', () => {
+    expect(adminMarkup).toContain('class="json-editor"');
+    expect(adminMarkup).toContain('maxlength="-1"');
+  });
+
   test('ignores context-changing handlers while saving', async () => {
     const instance = page();
     instance.setData({
@@ -468,6 +473,41 @@ describe('admin console page', () => {
     }));
     expect(mockQueryAdminDocuments).not.toHaveBeenCalled();
     expect(mockCheckAdmin).not.toHaveBeenCalled();
+  });
+
+  test('fetches the complete document before filling the editor for asset change rows', async () => {
+    mockGetAdminDocument.mockResolvedValue({
+      document: {
+        _id: 'change-1',
+        type: 'deposit',
+        amount: 1000,
+        beforeAmount: 5000,
+        afterAmount: 6000,
+        reason: '工资到账',
+        operatorOpenid: 'allowed-openid',
+        createdAt: '2026-07-28T00:00:00Z'
+      }
+    });
+    const instance = page();
+    instance.setData({
+      authorized: true,
+      selectedCollection: 'asset_changes',
+      documents: [{ _id: 'change-1', reason: '工资到账' }]
+    });
+
+    await instance.selectDocument({ currentTarget: { dataset: { id: 'change-1' } } });
+
+    expect(mockGetAdminDocument).toHaveBeenCalledWith('asset_changes', 'change-1');
+    expect(instance.data.selectedId).toBe('change-1');
+    expect(JSON.parse(instance.data.editorText)).toEqual({
+      type: 'deposit',
+      amount: 1000,
+      beforeAmount: 5000,
+      afterAmount: 6000,
+      reason: '工资到账',
+      operatorOpenid: 'allowed-openid',
+      createdAt: '2026-07-28T00:00:00Z'
+    });
   });
 
   test.each([

@@ -137,9 +137,26 @@ function requireWriteData(data) {
   return data;
 }
 
+function requireSafeWriteData(collectionName, action, data) {
+  const writeData = requireWriteData(data);
+  if (
+    collectionName === 'asset_changes'
+    && (action === 'update' || action === 'set')
+    && Object.prototype.hasOwnProperty.call(writeData, 'createdAt')
+    && typeof writeData.createdAt === 'string'
+  ) {
+    const createdAt = new Date(writeData.createdAt);
+    if (!Number.isFinite(createdAt.getTime())) throw new Error('DATA_INVALID');
+    return { ...writeData, createdAt };
+  }
+  return writeData;
+}
+
 async function writeDocument(event) {
   const collectionName = requireCollection(event.collection);
-  const data = event.action === 'remove' ? undefined : requireWriteData(event.data);
+  const data = event.action === 'remove'
+    ? undefined
+    : requireSafeWriteData(collectionName, event.action, event.data);
   const target = db.collection(collectionName);
 
   if (event.action === 'create') {
