@@ -5,48 +5,45 @@
     <view wx:elif="{{errorMessage}}" class="weui-cell error-state">{{errorMessage}}</view>
     <view wx:else class="weui-cells">
       <view wx:if="{{changes.length === 0}}" class="weui-cell empty">暂无调整记录</view>
-      <view wx:for="{{changes}}" wx:key="_id" class="weui-cell asset-change-row">
-        <view class="weui-cell__bd">
-          <view class="asset-change-title">{{item.typeLabel}} {{item.amountText}}</view>
-          <view class="caption">{{item.reason}}</view>
-          <view wx:if="{{item.type === 'deposit'}}" class="caption">已归还 {{item.repaidText}} · 剩余 {{item.outstandingText}}</view>
-          <view class="caption">{{item.createdText}}</view>
-          <button wx:if="{{item.canRepay}}" class="repay-button" size="mini" data-id="{{item._id}}" bindtap="startRepay">归还</button>
+      <block wx:for="{{changes}}" wx:key="_id">
+        <view class="weui-cell asset-change-row">
+          <view class="weui-cell__bd">
+            <view class="asset-change-title">{{item.typeLabel}} {{item.amountText}}</view>
+            <view class="caption">{{item.reason}}</view>
+            <view wx:if="{{item.type === 'deposit'}}" class="caption">已归还 {{item.repaidText}} · 剩余 {{item.outstandingText}}</view>
+            <view class="caption">{{item.createdText}}</view>
+            <button wx:if="{{item.canRepay}}" class="repay-button" size="mini" data-id="{{item._id}}" bindtap="startRepay">归还</button>
+          </view>
+          <view class="weui-cell__ft asset-change-balance">
+            <view>{{item.beforeText}}</view>
+            <view>{{item.afterText}}</view>
+          </view>
         </view>
-        <view class="weui-cell__ft asset-change-balance">
-          <view>{{item.beforeText}}</view>
-          <view>{{item.afterText}}</view>
+        <view wx:if="{{repaying && repayDeposit._id === item._id}}" class="weui-cell repay-inline">
+          <view class="weui-cell__bd">
+            <view class="asset-change-title">归还存入资金</view>
+            <view class="caption">{{repayDeposit.reason}}</view>
+            <view class="caption">剩余可归还 {{repayDeposit.outstandingText}}</view>
+            <view class="weui-cell input-row">
+              <view class="weui-cell__hd form-label">金额</view>
+              <view class="weui-cell__bd">
+                <input type="digit" value="{{repayAmountInput}}" placeholder="输入本次归还金额" bindinput="onRepayAmountInput" />
+              </view>
+            </view>
+            <view class="weui-cell input-row">
+              <view class="weui-cell__hd form-label">原因</view>
+              <view class="weui-cell__bd">
+                <input value="{{repayReasonInput}}" placeholder="输入归还原因" bindinput="onRepayReasonInput" />
+              </view>
+            </view>
+            <view wx:if="{{repayErrorMessage}}" class="error-state repay-error">{{repayErrorMessage}}</view>
+            <view class="repay-actions">
+              <button class="secondary-button" bindtap="cancelRepay">取消</button>
+              <button type="primary" loading="{{savingRepayment}}" disabled="{{savingRepayment}}" bindtap="submitRepay">确认归还</button>
+            </view>
+          </view>
         </view>
-      </view>
-    </view>
-  </view>
-
-  <view wx:if="{{repaying}}" class="weui-panel repay-panel">
-    <view class="weui-panel__hd">归还存入资金</view>
-    <view class="weui-cells">
-      <view class="weui-cell">
-        <view class="weui-cell__bd">
-          <view class="asset-change-title">{{repayDeposit.reason}}</view>
-          <view class="caption">剩余可归还 {{repayDeposit.outstandingText}}</view>
-        </view>
-      </view>
-      <view class="weui-cell">
-        <view class="weui-cell__hd form-label">金额</view>
-        <view class="weui-cell__bd">
-          <input type="digit" value="{{repayAmountInput}}" placeholder="输入本次归还金额" bindinput="onRepayAmountInput" />
-        </view>
-      </view>
-      <view class="weui-cell">
-        <view class="weui-cell__hd form-label">原因</view>
-        <view class="weui-cell__bd">
-          <input value="{{repayReasonInput}}" placeholder="输入归还原因" bindinput="onRepayReasonInput" />
-        </view>
-      </view>
-      <view wx:if="{{repayErrorMessage}}" class="weui-cell error-state">{{repayErrorMessage}}</view>
-      <view class="repay-actions">
-        <button class="secondary-button" bindtap="cancelRepay">取消</button>
-        <button type="primary" loading="{{savingRepayment}}" disabled="{{savingRepayment}}" bindtap="submitRepay">确认归还</button>
-      </view>
+      </block>
     </view>
   </view>
 </view>
