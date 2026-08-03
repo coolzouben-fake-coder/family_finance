@@ -27,3 +27,32 @@
 .error-state {
   color: var(--color-danger);
 }
+
+.repay-button {
+  margin: 16rpx 0 0;
+}
+
+.repay-panel {
+  margin-top: 24rpx;
+}
+
+.form-label {
+  width: 120rpx;
+  color: var(--weui-FG-0);
+  font-size: var(--font-body);
+}
+
+.repay-actions {
+  display: flex;
+  gap: 20rpx;
+  padding: 24rpx;
+}
+
+.repay-actions button {
+  flex: 1;
+}
+
+.secondary-button {
+  background: var(--weui-BG-1);
+  color: var(--weui-FG-0);
+}
