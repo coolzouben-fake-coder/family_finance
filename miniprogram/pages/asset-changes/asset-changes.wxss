@@ -32,8 +32,9 @@
   margin: 16rpx 0 0;
 }
 
-.repay-panel {
-  margin-top: 24rpx;
+.repay-inline {
+  background: var(--weui-BG-1);
+  align-items: stretch;
 }
 
 .form-label {
@@ -45,7 +46,7 @@
 .repay-actions {
   display: flex;
   gap: 20rpx;
-  padding: 24rpx;
+  padding-top: 24rpx;
 }
 
 .repay-actions button {
@@ -55,4 +56,12 @@
 .secondary-button {
   background: var(--weui-BG-1);
   color: var(--weui-FG-0);
+}
+
+.input-row {
+  padding: 20rpx 0 0;
+}
+
+.repay-error {
+  padding-top: 16rpx;
 }
