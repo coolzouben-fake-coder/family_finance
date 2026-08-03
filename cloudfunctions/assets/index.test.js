@@ -18,6 +18,12 @@ function resetDocuments() {
 
 function createCollection(name, store = documents) {
   const collection = store[name];
+  const readDocumentById = (id) => {
+    if (Array.isArray(collection)) {
+      return collection.find((document) => document._id === id);
+    }
+    return collection[id];
+  };
 
   return {
     where(filters) {
@@ -65,12 +71,13 @@ function createCollection(name, store = documents) {
           if (documentGetError) {
             throw documentGetError;
           }
-          if (!collection[id]) {
+          const document = readDocumentById(id);
+          if (!document) {
             const error = new Error('document does not exist');
             error.errCode = 'DATABASE_DOCUMENT_NOT_EXIST';
             throw error;
           }
-          return { data: collection[id] };
+          return { data: document };
         },
         async set({ data }) {
           collection[id] = { _id: id, ...data };
@@ -82,7 +89,9 @@ function createCollection(name, store = documents) {
     },
     async add({ data }) {
       if (name === 'asset_changes' && assetChangeAddError) throw assetChangeAddError;
-      store[name].push({ _id: `${name}-${store[name].length + 1}`, ...data });
+      const _id = `${name}-${store[name].length + 1}`;
+      store[name].push({ _id, ...data });
+      return { _id };
     }
   };
 }
@@ -300,6 +309,73 @@ test('withdraws from the current family asset and records the change', async () 
   })]);
 });
 
+test('repays part of a deposit and links the repayment to the source deposit', async () => {
+  documents.family_assets.current = { _id: 'current', totalAmount: 50000 };
+  documents.asset_changes = [
+    {
+      _id: 'deposit-1',
+      type: 'deposit',
+      amount: 10000,
+      beforeAmount: 40000,
+      afterAmount: 50000,
+      reason: '耶南存入',
+      createdAt: '2026-07-22T00:00:00Z'
+    }
+  ];
+
+  await expect(main({
+    action: 'repay',
+    depositId: 'deposit-1',
+    amount: 3000,
+    reason: '归还耶南'
+  })).resolves.toEqual({
+    ok: true,
+    asset: expect.objectContaining({ _id: 'current', totalAmount: 47000 }),
+    change: expect.objectContaining({
+      type: 'repay',
+      amount: 3000,
+      relatedDepositId: 'deposit-1',
+      beforeAmount: 50000,
+      afterAmount: 47000,
+      reason: '归还耶南'
+    })
+  });
+
+  expect(documents.family_assets.current.totalAmount).toBe(47000);
+  expect(documents.asset_changes).toEqual([
+    expect.objectContaining({ _id: 'deposit-1' }),
+    expect.objectContaining({
+      type: 'repay',
+      amount: 3000,
+      relatedDepositId: 'deposit-1',
+      beforeAmount: 50000,
+      afterAmount: 47000,
+      reason: '归还耶南',
+      operatorOpenid: 'allowed-openid',
+      createdAt: 'server-date'
+    })
+  ]);
+  expect(transactionRuns).toBe(1);
+});
+
+test('rejects repayments above the selected deposit outstanding amount', async () => {
+  documents.family_assets.current = { _id: 'current', totalAmount: 50000 };
+  documents.asset_changes = [
+    { _id: 'deposit-1', type: 'deposit', amount: 10000, beforeAmount: 40000, afterAmount: 50000, reason: '耶南存入', createdAt: '2026-07-22T00:00:00Z' },
+    { _id: 'repay-1', type: 'repay', amount: 8000, relatedDepositId: 'deposit-1', beforeAmount: 50000, afterAmount: 42000, reason: '归还耶南', createdAt: '2026-07-23T00:00:00Z' }
+  ];
+
+  await expect(main({
+    action: 'repay',
+    depositId: 'deposit-1',
+    amount: 3000,
+    reason: '再次归还'
+  })).rejects.toThrow('ASSET_REPAY_AMOUNT_EXCEEDS_OUTSTANDING');
+
+  expect(documents.family_assets.current.totalAmount).toBe(50000);
+  expect(documents.asset_changes).toHaveLength(2);
+});
+
 test('rejects withdraws that would make family assets negative', async () => {
   documents.family_assets.current = { _id: 'current', totalAmount: 5000 };
 
@@ -327,6 +403,26 @@ test('lists all asset changes in newest-first order', async () => {
     changes: [
       expect.objectContaining({ _id: 'new' }),
       expect.objectContaining({ _id: 'old' })
+    ]
+  });
+});
+
+test('decorates deposits with repaid and outstanding amounts when listing changes', async () => {
+  documents.asset_changes = [
+    { _id: 'deposit-1', type: 'deposit', amount: 10000, beforeAmount: 0, afterAmount: 10000, reason: '耶南存入', createdAt: '2026-07-21T00:00:00Z' },
+    { _id: 'repay-1', type: 'repay', amount: 3000, relatedDepositId: 'deposit-1', beforeAmount: 10000, afterAmount: 7000, reason: '归还耶南', createdAt: '2026-07-22T00:00:00Z' }
+  ];
+
+  await expect(main({ action: 'listChanges' })).resolves.toEqual({
+    ok: true,
+    changes: [
+      expect.objectContaining({ _id: 'repay-1' }),
+      expect.objectContaining({
+        _id: 'deposit-1',
+        repaidAmount: 3000,
+        outstandingAmount: 7000,
+        repayable: true
+      })
     ]
   });
 });
