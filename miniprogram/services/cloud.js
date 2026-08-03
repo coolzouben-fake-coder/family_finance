@@ -34,6 +34,9 @@ function updateAssets(type, amount, reason) {
 }
 
 function listAssetChanges() { return callCloud('assets', { action: 'listChanges' }, { silent: true }); }
+function repayAssetDeposit(depositId, amount, reason) {
+  return callCloud('assets', { action: 'repay', depositId, amount, reason });
+}
 
 function listProjects(filters = {}) { return callCloud('projects', { action: 'list', ...filters }); }
 function listCategories() { return callCloud('projects', { action: 'listCategories' }); }
@@ -72,7 +75,7 @@ function removeAdminDocument(collection, id) {
 }
 
 module.exports = {
-  callCloud, getAssets, updateAssets, listAssetChanges, listProjects, listCategories, listUsers, createProject, updateProject,
+  callCloud, getAssets, updateAssets, listAssetChanges, repayAssetDeposit, listProjects, listCategories, listUsers, createProject, updateProject,
   redeemProject, receiveReturnProject, receiveRewardProject, redeemPrincipalProject, correctRedemption, cancelProject, removeProject, getAnnualStats,
   checkAdmin, listAdminCollections, queryAdminDocuments, getAdminDocument, createAdminDocument, updateAdminDocument,
   setAdminDocument, removeAdminDocument
