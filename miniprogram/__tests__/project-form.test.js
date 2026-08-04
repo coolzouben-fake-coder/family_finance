@@ -357,6 +357,8 @@ describe('project form', () => {
 
     expect(markup).toContain('到账处理');
     expect(markup).toContain('本金/利息到账');
+    expect(markup).toContain('总到账');
+    expect(markup).toContain('本金+利息');
     expect(markup).toContain('奖励到账');
     expect(markup).toContain('确认本金到账');
     expect(markup).toContain('确认奖励到账');
@@ -470,7 +472,9 @@ describe('project form', () => {
     page.onLoad({ id: 'redeemed-id' });
     await flushPromises();
     await flushPromises();
-    page.data.principalForm = { redeemDate: '2026-07-30', actualInterest: '-30' };
+    expect(page.data.principalForm.totalReceivedAmount).toBe('10020');
+
+    page.data.principalForm = { redeemDate: '2026-07-30', totalReceivedAmount: '9970' };
     page.data.rewardForm = { rewardReceivedDate: '2026-08-01', actualFixedReward: '150' };
     page.redeem();
     await flushPromises();
@@ -521,7 +525,8 @@ describe('project form', () => {
     page.data.isRedeemed = false;
     page.data.isPrincipalReleased = false;
     page.data.isRewardReceived = true;
-    page.data.principalForm = { redeemDate: '2026-07-28', actualInterest: '999' };
+    page.data.form.principal = '10000';
+    page.data.principalForm = { redeemDate: '2026-07-28', totalReceivedAmount: '10999' };
     page.data.rewardForm = { rewardReceivedDate: '2026-07-20', actualFixedReward: '100' };
 
     page.redeemPrincipal();

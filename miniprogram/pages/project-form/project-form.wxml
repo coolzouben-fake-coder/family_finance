@@ -90,8 +90,8 @@
           </view>
         </view>
         <view class="weui-cell">
-          <view class="weui-cell__hd"><label class="weui-label">利息</label></view>
-          <view class="weui-cell__bd"><input class="weui-input field" type="text" placeholder="实际利息" value="{{principalForm.actualInterest}}" data-field="actualInterest" bindinput="onPrincipalInput" disabled="{{saving || receivingReturn || redeeming || removing}}" /></view>
+          <view class="weui-cell__hd"><label class="weui-label">总到账</label></view>
+          <view class="weui-cell__bd"><input class="weui-input field" type="text" placeholder="本金+利息" value="{{principalForm.totalReceivedAmount}}" data-field="totalReceivedAmount" bindinput="onPrincipalInput" disabled="{{saving || receivingReturn || redeeming || removing}}" /></view>
         </view>
         <button class="weui-btn weui-btn_default secondary-button" loading="{{redeeming}}" disabled="{{saving || receivingReturn || redeeming || removing}}" bindtap="redeemPrincipal">确认本金到账</button>
       </view>
@@ -131,8 +131,8 @@
           </view>
         </view>
         <view class="weui-cell">
-          <view class="weui-cell__hd"><label class="weui-label">利息</label></view>
-          <view class="weui-cell__bd"><input class="weui-input field" type="text" placeholder="实际利息" value="{{principalForm.actualInterest}}" data-field="actualInterest" bindinput="onPrincipalInput" disabled="{{saving || receivingReturn || redeeming || removing}}" /></view>
+          <view class="weui-cell__hd"><label class="weui-label">总到账</label></view>
+          <view class="weui-cell__bd"><input class="weui-input field" type="text" placeholder="本金+利息" value="{{principalForm.totalReceivedAmount}}" data-field="totalReceivedAmount" bindinput="onPrincipalInput" disabled="{{saving || receivingReturn || redeeming || removing}}" /></view>
         </view>
         <view class="weui-cell">
           <view class="weui-cell__hd"><label class="weui-label">奖励日</label></view>

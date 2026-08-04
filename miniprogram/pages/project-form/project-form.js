@@ -73,6 +73,26 @@ function rewardDateOf(project) {
   return project.rewardReceivedDate || project.returnReceivedDate || project.redeemDate || '';
 }
 
+function totalReceivedAmountOf(project) {
+  if (!project) return '';
+  return String(Number(project.principal || 0) + Number(project.actualInterest || 0));
+}
+
+function hasOwn(object, key) {
+  return Object.prototype.hasOwnProperty.call(object || {}, key);
+}
+
+function actualInterestFromTotal(form, principalForm, redeemForm) {
+  const principal = Number(form.principal || 0);
+  if (hasOwn(principalForm, 'totalReceivedAmount')) {
+    return Number(principalForm.totalReceivedAmount || 0) - principal;
+  }
+  if (hasOwn(redeemForm, 'totalReceivedAmount')) {
+    return Number(redeemForm.totalReceivedAmount || 0) - principal;
+  }
+  return Number((principalForm && principalForm.actualInterest) || (redeemForm && redeemForm.actualInterest) || 0);
+}
+
 Page({
   data: {
     projectId: '', categories: [], users: [], selectedCategoryName: '', selectedRegistrantName: '',
@@ -90,8 +110,8 @@ Page({
     redeemDateText: REDEEM_DATE_PLACEHOLDER,
     principalDateText: REDEEM_DATE_PLACEHOLDER, rewardDateText: REDEEM_DATE_PLACEHOLDER,
     form: emptyForm(),
-    redeemForm: { redeemDate: '', actualInterest: '', actualFixedReward: '' },
-    principalForm: { redeemDate: '', actualInterest: '' },
+    redeemForm: { redeemDate: '', totalReceivedAmount: '', actualInterest: '', actualFixedReward: '' },
+    principalForm: { redeemDate: '', totalReceivedAmount: '' },
     rewardForm: { rewardReceivedDate: '', actualFixedReward: '' }
   },
   onLoad(options) {
@@ -151,12 +171,13 @@ Page({
           } : { ...emptyForm(), registrantOpenid: session.openid },
           redeemForm: project && (isPrincipalReleased || isRewardReceived) ? {
             redeemDate,
+            totalReceivedAmount: totalReceivedAmountOf(project),
             actualInterest: String(project.actualInterest || ''),
             actualFixedReward: String(project.actualFixedReward || '')
           } : this.data.redeemForm,
           principalForm: project ? {
             redeemDate,
-            actualInterest: String(project.actualInterest || '')
+            totalReceivedAmount: totalReceivedAmountOf(project)
           } : this.data.principalForm,
           rewardForm: project ? {
             rewardReceivedDate,
@@ -233,7 +254,7 @@ Page({
     const request = this.data.isRedeemed ? correctRedemption : redeemProject;
     request(this.data.projectId, {
       redeemDate: this.data.principalForm.redeemDate || this.data.redeemForm.redeemDate,
-      actualInterest: Number(this.data.principalForm.actualInterest || this.data.redeemForm.actualInterest || 0),
+      actualInterest: actualInterestFromTotal(this.data.form, this.data.principalForm, this.data.redeemForm),
       rewardReceivedDate: this.data.rewardForm.rewardReceivedDate || this.data.redeemForm.redeemDate,
       actualFixedReward: Number(this.data.rewardForm.actualFixedReward || this.data.redeemForm.actualFixedReward || 0)
     }).then(leaveProjectForm).catch(showError).finally(() => this.setData({ redeeming: false }));
@@ -263,7 +284,7 @@ Page({
     this.setData({ redeeming: true });
     redeemPrincipalProject(this.data.projectId, {
       redeemDate: this.data.principalForm.redeemDate || this.data.redeemForm.redeemDate,
-      actualInterest: Number(this.data.principalForm.actualInterest || this.data.redeemForm.actualInterest || 0)
+      actualInterest: actualInterestFromTotal(this.data.form, this.data.principalForm, this.data.redeemForm)
     }).then(leaveProjectForm).catch(showError).finally(() => this.setData({ redeeming: false }));
   },
   remove() {
